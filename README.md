@@ -1,6 +1,6 @@
 # ADvTECH Website Status
 
-Continuous availability, performance and TLS certificate monitoring for the 41
+Continuous availability, performance and TLS certificate monitoring for the 37
 ADvTECH web properties — running entirely on GitHub, with a public status page
 anyone can open without a licence or a login.
 
@@ -21,7 +21,7 @@ GitHub Actions (cron)  ──►  scripts/probe.mjs  ──►  commits docs/dat
 ```
 
 1. **Actions** wakes on a schedule and runs the prober.
-2. **`probe.mjs`** checks all 41 sites in parallel using only the Node standard
+2. **`probe.mjs`** checks all 37 sites in parallel using only the Node standard
    library — nothing to install, nothing to keep patched.
 3. Results are **committed back to the repo**, so git history *is* the time-series
    database. Every check is a commit you can diff.
@@ -98,6 +98,23 @@ newsite.co.za,https://www.newsite.co.za/,New Brand,Schools,
 
 Committing it triggers an immediate re-check (the workflow watches that path).
 Removing a row also drops its history from the rolling window.
+
+### Sites deliberately not monitored
+
+Four ADvTECH domains are **redirects to other properties**, not sites in their own
+right, so they are excluded rather than counted as separate estate entries:
+
+| Domain | Redirects to |
+| --- | --- |
+| `advtech.co.za` | `groupadvtech.com` |
+| `iiemsa.co.za` | `emeris.ac.za` |
+| `varsitycollege.co.za` | `emeris.ac.za` |
+| `vegaschool.com` | `emeris.ac.za/faculty/vega-school` |
+
+The destinations (`groupadvtech.com`, `emeris.ac.za`) are monitored, so an outage
+still shows up. What this does *not* catch is one of the redirects themselves
+breaking — if that matters, add the domain back and it will be flagged in the
+Detail column whenever its final URL changes.
 
 The optional **`ExpectedText`** column guards against "soft" failures — pages
 that return HTTP 200 while actually being broken. Put a string that should always
