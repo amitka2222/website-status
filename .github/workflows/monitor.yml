@@ -2,10 +2,10 @@ name: Monitor websites
 
 on:
   schedule:
-    # Every 15 minutes. See README for the cost/cadence trade-off before tightening
-    # this to */5 - GitHub's minimum interval is 5 minutes and it is only free on
-    # public repositories.
-    - cron: '*/15 * * * *'
+    # Every 5 minutes - GitHub's minimum. Free only because this repo is public;
+    # see the cadence/cost table in the README before making the repo private.
+    # Note that GitHub cron is best-effort and runs are often delayed under load.
+    - cron: '*/5 * * * *'
   workflow_dispatch:        # lets anyone trigger a check by hand from the Actions tab
   push:
     branches: [main]

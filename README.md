@@ -47,8 +47,9 @@ packet doesn't invent an outage.
 
 ## Cadence and cost — read before changing the schedule
 
-The workflow ships at **every 15 minutes**. Whether you can tighten that depends
-entirely on repository visibility:
+The workflow is set to **every 5 minutes**, which is GitHub's minimum and is free
+because this repository is public. If it is ever made private, that becomes
+billable and the schedule must be relaxed:
 
 | Repo | Actions minutes | Practical cadence |
 | --- | --- | --- |
