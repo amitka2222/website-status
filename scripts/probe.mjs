@@ -14,7 +14,14 @@ const DAILY_DIR = join(DATA, 'daily');
 
 const TIMEOUT_MS     = 30000;
 const CONCURRENCY    = 10;
-const SLOW_MS        = 3000;   // slower than this counts as Degraded
+// Calibrated for the vantage point, not for a local browser. GitHub's runners sit
+// in US datacentres, so South African sites legitimately answer in 2-5s from there
+// (measured: p50 2.1s, p90 4.5s). A 3s threshold - reasonable from Johannesburg -
+// flagged a quarter of the estate as degraded around the clock. 8s leaves headroom
+// above normal transatlantic latency while still catching a genuinely sick site.
+// A per-site baseline (flag when a site exceeds ~2x its own 7-day p95) would be
+// sharper still, and the daily aggregates already record what that needs.
+const SLOW_MS        = 8000;   // slower than this counts as Degraded
 const CERT_WARN_DAYS = 21;     // cert expiring sooner than this counts as Degraded
 const MAX_REDIRECTS  = 10;
 const RETRIES        = 1;

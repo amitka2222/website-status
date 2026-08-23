@@ -153,7 +153,7 @@ Constants at the top of [`scripts/probe.mjs`](scripts/probe.mjs):
 | --- | --- | --- |
 | `TIMEOUT_MS` | 30000 | Per-request timeout |
 | `CONCURRENCY` | 10 | Parallel checks |
-| `SLOW_MS` | 3000 | Degraded threshold |
+| `SLOW_MS` | 8000 | Degraded threshold (set for US-runner latency, see below) |
 | `CERT_WARN_DAYS` | 21 | Certificate warning window |
 | `RETRIES` | 1 | Retries before recording Down |
 | `RECENT_POINTS` | 288 | Sparkline window length |
@@ -181,6 +181,13 @@ the repo is public — and still exposed to everyone with read access if it isn'
   US East). This measures "can a datacentre in the US reach the site", not "can a
   parent in Johannesburg reach the site". Latency figures are inflated relative to
   local users, and a regional routing problem in South Africa may not show up at all.
+
+  This is not theoretical: from a runner these sites answer in a median of 2.1s
+  (p90 4.5s) against roughly 0.8s measured locally. `SLOW_MS` is set to 8000 to
+  suit that vantage point. **Treat response times as a trend line, not an
+  absolute** — what matters is a site getting slower than its own normal, not the
+  raw number. If you need figures that reflect real user experience, the check has
+  to run from South Africa.
 - **Not a pager.** Cron delays mean detection latency is tens of minutes, not
   seconds. For genuine on-call alerting you want a purpose-built service —
   UptimeRobot, Better Stack or Azure Application Insights availability tests.
