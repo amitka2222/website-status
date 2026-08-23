@@ -1,0 +1,75 @@
+name: Monitor websites
+
+on:
+  schedule:
+    # Every 15 minutes. See README for the cost/cadence trade-off before tightening
+    # this to */5 - GitHub's minimum interval is 5 minutes and it is only free on
+    # public repositories.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:        # lets anyone trigger a check by hand from the Actions tab
+  push:
+    branches: [main]
+    paths:
+      - 'sites.csv'         # re-check immediately when the site list changes
+      - 'scripts/probe.mjs'
+
+permissions:
+  contents: write           # required to commit the results back to the repo
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false # never cut a run short - a partial result is worse than a late one
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probe all sites
+        run: node scripts/probe.mjs
+
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data
+          if git diff --staged --quiet; then
+            echo "No change in status - nothing to commit."
+            exit 0
+          fi
+          SUMMARY=$(node -e "const s=require('./docs/data/status.json');console.log(\`\${s.up} up, \${s.degraded} degraded, \${s.down} down\`)")
+          git commit -m "chore: site check - $SUMMARY [skip ci]"
+          # The scheduled run and a concurrent push can race; rebase and retry rather than fail.
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase --autostash || true
+          done
+          echo "::error::Could not push results after 3 attempts"
+          exit 1
+
+      - name: Flag failures in the job summary
+        if: always()
+        run: |
+          node -e "
+          const s = require('./docs/data/status.json');
+          const bad = s.sites.filter(x => x.state !== 'up');
+          const lines = [
+            '## Site check: ' + s.up + ' up, ' + s.degraded + ' degraded, ' + s.down + ' down',
+            '',
+            'Checked ' + s.generatedAt,
+          ];
+          if (bad.length) {
+            lines.push('', '| Site | State | Detail |', '| --- | --- | --- |');
+            for (const b of bad) lines.push('| ' + b.site + ' | ' + b.state + ' | ' + (b.reason || '') + ' |');
+          } else {
+            lines.push('', 'All sites healthy.');
+          }
+          require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
