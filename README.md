@@ -4,8 +4,7 @@ Continuous availability, performance and TLS certificate monitoring for the 37
 ADvTECH web properties — running entirely on GitHub, with a public status page
 anyone can open without a licence or a login.
 
-> **Live dashboard:** `https://<owner>.github.io/website-status/`
-> _(update this once GitHub Pages is switched on)_
+> **Live dashboard:** https://amitka2222.github.io/website-status/
 
 ## How it works
 
