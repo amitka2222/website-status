@@ -1,0 +1,6 @@
+# The Actions runner (Linux) commits results back to this repo. Without
+# normalisation, Windows checkouts and runner commits fight over line
+# endings and every automated commit shows spurious whole-file diffs.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
