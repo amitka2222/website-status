@@ -129,6 +129,7 @@
     border: 1px solid var(--border);
   }
   .banner.warn     { background: var(--warning-wash);  border-color: #fab21966; }
+  .banner.info     { background: #ec835a1f;            border-color: #ec835a66; }
   .banner.critical { background: var(--critical-wash); border-color: #d03b3b66; }
   .banner b { font-weight: 620; }
 
@@ -190,7 +191,9 @@
   .s-up       .dot { background: var(--good); }
   .s-degraded .dot { background: var(--warning); }
   .s-down     .dot { background: var(--critical); }
+  .s-blocked  .dot { background: var(--serious); }
   .s-down { color: var(--critical); font-weight: 640; }
+  .s-blocked { color: var(--serious); }
 
   .reason { color: var(--text-secondary); font-size: 12.5px; white-space: normal; min-width: 190px; }
   .cert-crit { color: var(--critical); font-weight: 600; }
@@ -397,7 +400,15 @@
     return Math.max(1, Math.round(gaps[Math.floor(gaps.length / 2)]));
   }
 
+  function isBlocked(site) {
+    var s = state.status && state.status.sites.filter(function (x) { return x.site === site; })[0];
+    return !!s && s.state === 'blocked';
+  }
+
   function uptimeFor(site) {
+    // A blocked site was never measured, so reporting a percentage for it would
+    // invent a number. Better to show nothing than something false.
+    if (isBlocked(site)) return null;
     var series = state.recent && state.recent.series && state.recent.series[site];
     if (!series || !series.length) return null;
     var seen = 0, ok = 0;
@@ -547,6 +558,16 @@
       banners.push('<div class="banner critical"><b>✕ ' + s.down + ' site' + (s.down > 1 ? 's' : '') +
         ' down:</b> ' + esc(names) + '</div>');
     }
+    var blockedSites = s.sites.filter(function (x) { return x.state === 'blocked'; });
+    if (blockedSites.length) {
+      banners.push('<div class="banner info"><b>ℹ ' + blockedSites.length + ' site' +
+        (blockedSites.length > 1 ? 's' : '') + ' cannot be verified:</b> ' +
+        esc(blockedSites.map(function (x) { return x.site; }).join(', ')) +
+        ' — bot protection is returning HTTP 403 to this monitor. The site is almost ' +
+        'certainly fine for real visitors; we simply cannot confirm it. Allowlist the ' +
+        'monitor in the CDN/WAF to restore coverage.</div>');
+    }
+
     var expiring = s.sites.filter(function (x) { return x.cert && x.cert.days != null && x.cert.days <= 21; });
     if (expiring.length) {
       expiring.sort(function (a, b) { return a.cert.days - b.cert.days; });
@@ -564,6 +585,11 @@
     } else if (s.degraded > 0) {
       heroFig = s.degraded + ' degraded'; heroColor = 'var(--warning)';
       heroLabel = 'of ' + s.total + ' sites — reachable, but something is off';
+    } else if (blockedSites.length) {
+      heroFig = (s.total - blockedSites.length) + ' of ' + s.total + ' up';
+      heroColor = 'var(--serious)';
+      heroLabel = 'All verifiable sites are healthy — ' + blockedSites.length +
+                  ' cannot be checked (see above)';
     } else {
       heroFig = 'All ' + s.total + ' up'; heroColor = 'var(--good)';
       heroLabel = 'Every monitored site is responding normally';
@@ -603,6 +629,7 @@
       { label: 'Healthy',        value: s.up,       foot: 'of ' + s.total + ' sites' },
       { label: 'Degraded',       value: s.degraded, foot: 'reachable, with issues' },
       { label: 'Down',           value: s.down,     foot: openInc ? openInc + ' open incident' + (openInc > 1 ? 's' : '') : 'no open incidents' },
+      { label: 'Unverifiable',   value: s.blocked || 0, foot: (s.blocked ? 'blocked by bot protection' : 'all sites reachable') },
       { label: 'Availability',   value: estateUptime == null ? '—' : (estateUptime * 100).toFixed(2) + '%',
         foot: pts.length ? 'across last ' + pts.length + ' checks' : 'building history' },
       { label: 'Median response', value: median == null ? '—' : median + ' ms',
@@ -636,7 +663,9 @@
     document.getElementById('formRows').innerHTML = f.forms.slice().sort(function (a, b) {
       return (STATE_RANK[a.state] - STATE_RANK[b.state]) || a.name.localeCompare(b.name);
     }).map(function (x) {
-      var label = x.state === 'up' ? 'OK' : x.state === 'degraded' ? 'Degraded' : 'Down';
+      var label = x.state === 'up' ? 'OK'
+                : x.state === 'degraded' ? 'Degraded'
+                : x.state === 'blocked' ? 'Blocked' : 'Down';
       // Surface the campus dropdown size - an empty one is a broken form that
       // still returns HTTP 200 and looks healthy from outside.
       var counts = x.selectCounts || {};
@@ -668,7 +697,7 @@
       'year and campus are chosen, so they are not yet verified.';
   }
 
-  var STATE_RANK = { down: 0, degraded: 1, up: 2 };
+  var STATE_RANK = { down: 0, blocked: 1, degraded: 2, up: 3 };
 
   function renderGrid() {
     var s = state.status;
@@ -716,7 +745,9 @@
         if (x.cert.days <= 14) certCls = 'cert-crit';
         else if (x.cert.days <= 30) certCls = 'cert-warn';
       }
-      var label = x.state === 'up' ? 'Up' : x.state === 'degraded' ? 'Degraded' : 'Down';
+      var label = x.state === 'up' ? 'Up'
+                : x.state === 'degraded' ? 'Degraded'
+                : x.state === 'blocked' ? 'Blocked' : 'Down';
       var redirectNote = x.redirected
         ? '<div class="site-brand">→ ' + esc(x.finalUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>'
         : '';

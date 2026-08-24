@@ -23,6 +23,12 @@ const FIELD_TIMEOUT_MS = 20000;  // how long to wait for the form to render
 const SLOW_MS          = 15000;  // a form slower than this is Degraded (browser + US runner)
 const RECENT_POINTS    = 96;     // rolling window for the sparkline (48h at 30 min)
 
+// Some properties sit behind a Cloudflare bot challenge that no automated client
+// can pass - not even a headless browser, which Cloudflare fingerprints. The page
+// is fine for real visitors, so this is "cannot verify", not "down". Reporting it
+// as an outage would be a false alarm; reporting it as up would be a false pass.
+const CHALLENGE_RE = /Just a moment|cf-browser-verification|challenge-platform|_cf_chl|Attention Required|Checking your browser/i;
+
 const readJson = (f, fallback) => {
   try { return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : fallback; }
   catch { return fallback; }
@@ -55,7 +61,7 @@ for (const form of forms) {
 
   const problems = [];
   const detail = { missingFields: [], emptySelects: [], selectCounts: {} };
-  let status = null, ms = null, finalUrl = null, rendered = false;
+  let status = null, ms = null, finalUrl = null, rendered = false, blocked = false;
 
   const started = Date.now();
   try {
@@ -63,10 +69,21 @@ for (const form of forms) {
     status = response ? response.status() : null;
     finalUrl = page.url();
 
-    if (status === null)      problems.push('No response');
-    else if (status >= 400)   problems.push('HTTP ' + status);
+    if (status !== null && status >= 400) {
+      const body = await page.content().catch(() => '');
+      const mitigated = response && response.headers()['cf-mitigated'] === 'challenge';
+      if (mitigated || CHALLENGE_RE.test(body)) blocked = true;
+    }
 
-    if (status && status < 400) {
+    if (blocked) {
+      problems.push('Blocked by bot protection - cannot verify');
+    } else if (status === null) {
+      problems.push('No response');
+    } else if (status >= 400) {
+      problems.push('HTTP ' + status);
+    }
+
+    if (!blocked && status && status < 400) {
       // Wait for the form itself, not just the document - these pages render late.
       try {
         await page.waitForSelector(form.waitFor, { state: 'attached', timeout: FIELD_TIMEOUT_MS });
@@ -117,7 +134,9 @@ for (const form of forms) {
 
   // A console error alone is not a failure - plenty of healthy pages log noise from
   // analytics and third-party embeds. It is recorded for context only.
-  const state = problems.length ? (rendered && status && status < 400 ? 'degraded' : 'down') : 'up';
+  const state = blocked ? 'blocked'
+              : problems.length ? (rendered && status && status < 400 ? 'degraded' : 'down')
+              : 'up';
 
   results.push({
     id: form.id,
@@ -137,7 +156,7 @@ for (const form of forms) {
     reason: problems.join('; '),
   });
 
-  console.log('  [' + (state === 'up' ? 'OK  ' : state.toUpperCase()) + '] ' +
+  console.log('  [' + (state === 'up' ? 'OK  ' : state.toUpperCase().padEnd(4)) + '] ' +
               form.id.padEnd(20) + ms + 'ms' + (problems.length ? '  - ' + problems.join('; ') : ''));
 
   await context.close();
@@ -147,7 +166,7 @@ await browser.close();
 
 // ---------------------------------------------------------------- persist
 const nowIso = new Date().toISOString();
-const counts = { up: 0, degraded: 0, down: 0 };
+const counts = { up: 0, degraded: 0, down: 0, blocked: 0 };
 for (const r of results) counts[r.state]++;
 
 writeJson(join(DATA, 'forms.json'), {
@@ -162,7 +181,7 @@ const recent = readJson(join(DATA, 'forms-recent.json'), { points: [], series: {
 recent.points.push(nowIso);
 for (const r of results) {
   if (!recent.series[r.id]) recent.series[r.id] = [];
-  recent.series[r.id].push(r.state === 'down' ? null : r.ms);
+  recent.series[r.id].push(r.state === 'down' || r.state === 'blocked' ? null : r.ms);
 }
 const overflow = recent.points.length - RECENT_POINTS;
 if (overflow > 0) recent.points = recent.points.slice(overflow);
@@ -178,6 +197,7 @@ for (const k of Object.keys(recent.series)) {
 recent.updatedAt = nowIso;
 writeJson(join(DATA, 'forms-recent.json'), recent);
 
-console.log('Forms: ' + counts.up + ' ok, ' + counts.degraded + ' degraded, ' + counts.down + ' down');
+console.log('Forms: ' + counts.up + ' ok, ' + counts.degraded + ' degraded, ' +
+            counts.down + ' down, ' + counts.blocked + ' blocked');
 
 if (counts.down > 0 && process.env.FAIL_ON_DOWN === 'true') process.exitCode = 1;

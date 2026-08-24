@@ -40,6 +40,27 @@ Each result is classified:
 | **Up** | HTTP 2xx/3xx, responded promptly, certificate healthy |
 | **Degraded** | Reachable, but slow (>3s), or certificate expiring within 21 days, or the content check failed |
 | **Down** | HTTP 4xx/5xx, or no response at all |
+| **Blocked** | Bot protection refused the monitor — the site could not be verified either way |
+
+### Blocked is not down
+
+Some properties sit behind a CDN bot challenge (Cloudflare's "Just a moment…"
+interstitial) that returns **HTTP 403 to every automated client** — any user
+agent, any source IP, and headless browsers too, since those get fingerprinted.
+`rbi.ac.za` currently does this.
+
+That is not an outage. Real visitors solve the JavaScript challenge and reach the
+site normally. But calling it **Up** would be a false pass, and calling it **Down**
+is a false alarm that trains people to ignore the dashboard. So it gets its own
+state meaning *"we could not check"*, and blocked checks are excluded from the
+uptime maths entirely rather than scored as either success or failure — a
+percentage there would be an invented number.
+
+**The fix is an allowlist, not a workaround.** Ask whoever manages that domain's
+Cloudflare to permit the monitor — by source IP, or by a custom header the
+workflow sends from a secret. Do not try to evade the challenge: defeating your
+own bot protection to monitor yourself is the wrong trade, and it would break
+again the moment the rules are tightened.
 
 Failed requests are retried once before being recorded as Down, so one dropped
 packet doesn't invent an outage.

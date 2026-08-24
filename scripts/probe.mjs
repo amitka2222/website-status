@@ -29,6 +29,19 @@ const RECENT_POINTS  = 288;    // rolling sparkline window
 
 const USER_AGENT = 'ADvTECH-SiteMonitor/1.0 (+availability monitoring)';
 
+// Some properties sit behind a Cloudflare bot challenge that returns 403 to every
+// automated client regardless of user agent or source IP. The site is perfectly
+// fine for real visitors, so this is "cannot verify" - not "down". Calling it an
+// outage is a false alarm; calling it up would be a false pass. It gets its own
+// state so the distinction is visible rather than guessed at.
+const CHALLENGE_RE = /Just a moment|cf-browser-verification|challenge-platform|_cf_chl|Attention Required|Checking your browser/i;
+
+function isBotChallenge(status, headers, body) {
+  if (headers && headers['cf-mitigated'] === 'challenge') return true;
+  if ((status === 403 || status === 503 || status === 429) && body && CHALLENGE_RE.test(body)) return true;
+  return false;
+}
+
 // ---------------------------------------------------------------- site list
 
 function parseCsv(text) {
@@ -133,7 +146,8 @@ async function probe(url) {
     const location = res.headers && res.headers.location;
     const isRedirect = res.status >= 300 && res.status < 400 && location;
     if (!isRedirect) {
-      return { status: res.status, bytes: res.bytes, body: res.body, ms: totalMs, finalUrl: current, hops, cert };
+      return { status: res.status, headers: res.headers, bytes: res.bytes, body: res.body,
+               ms: totalMs, finalUrl: current, hops, cert };
     }
 
     current = new URL(location, current).toString();
@@ -154,10 +168,12 @@ async function checkSite(site) {
   const expected = (site.ExpectedText || '').trim();
   const contentOk = expected ? (result.body || '').includes(expected) : null;
 
+  const blocked = isBotChallenge(result.status, result.headers, result.body);
   const up = !result.error && result.status >= 200 && result.status < 400;
   const reasons = [];
 
-  if (result.error) reasons.push(result.error);
+  if (blocked) reasons.push('Blocked by bot protection (HTTP ' + result.status + ') - cannot verify');
+  else if (result.error) reasons.push(result.error);
   else if (!up) reasons.push('HTTP ' + result.status);
 
   if (up && result.ms > SLOW_MS) reasons.push('Slow (' + (result.ms / 1000).toFixed(1) + 's)');
@@ -169,7 +185,7 @@ async function checkSite(site) {
     reasons.push('Certificate expires in ' + result.cert.daysToExpiry + ' days');
   }
 
-  const state = !up ? 'down' : reasons.length ? 'degraded' : 'up';
+  const state = blocked ? 'blocked' : !up ? 'down' : reasons.length ? 'degraded' : 'up';
 
   return {
     site: site.Site,
@@ -245,7 +261,7 @@ const nowIso = new Date().toISOString();
 const day    = nowIso.slice(0, 10);
 const month  = nowIso.slice(0, 7);
 
-const counts = { up: 0, degraded: 0, down: 0 };
+const counts = { up: 0, degraded: 0, down: 0, blocked: 0 };
 for (const r of results) counts[r.state]++;
 
 // --- 1. Current snapshot -------------------------------------------------
@@ -255,6 +271,7 @@ writeJson(join(DATA, 'status.json'), {
   up: counts.up,
   degraded: counts.degraded,
   down: counts.down,
+  blocked: counts.blocked,
   // Strip the response body before writing - it is only needed for the content check.
   sites: results.map(({ body, ...rest }) => rest),
 });
@@ -264,7 +281,7 @@ const recent = readJson(join(DATA, 'recent.json'), { points: [], series: {} });
 recent.points.push(nowIso);
 for (const r of results) {
   if (!recent.series[r.site]) recent.series[r.site] = [];
-  recent.series[r.site].push(r.state === 'down' ? null : r.ms);
+  recent.series[r.site].push(r.state === 'down' || r.state === 'blocked' ? null : r.ms);
 }
 
 const overflow = recent.points.length - RECENT_POINTS;
@@ -294,6 +311,9 @@ const daily = readJson(dailyFile, {});
 if (!daily[day]) daily[day] = {};
 
 for (const r of results) {
+  // A blocked check measured nothing, so it is excluded from the uptime maths
+  // entirely rather than counted as either a success or a failure.
+  if (r.state === 'blocked') continue;
   if (!daily[day][r.site]) {
     daily[day][r.site] = { checks: 0, up: 0, msSum: 0, msMax: 0, samples: [] };
   }
@@ -330,6 +350,9 @@ for (const r of results) {
       status: r.status,
       reason: r.reason || 'Unreachable',
     });
+  } else if (r.state === 'blocked') {
+    // Leave any existing incident alone - we cannot tell whether it recovered.
+    continue;
   } else if (r.state !== 'down' && open) {
     open.endedAt = nowIso;
     open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);
@@ -340,7 +363,8 @@ writeJson(incidentsFile, incidents.slice(0, 500));
 
 // --- 5. Console summary --------------------------------------------------
 const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
-console.log('Done in ' + secs + 's - up ' + counts.up + ', degraded ' + counts.degraded + ', down ' + counts.down);
+console.log('Done in ' + secs + 's - up ' + counts.up + ', degraded ' + counts.degraded +
+            ', down ' + counts.down + ', blocked ' + counts.blocked);
 for (const r of results.filter(x => x.state !== 'up')) {
   console.log('  [' + r.state.toUpperCase() + '] ' + r.site + ' - ' + r.reason);
 }
