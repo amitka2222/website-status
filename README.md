@@ -66,10 +66,19 @@ To change it, edit the `cron` line in
 
 **Two things about GitHub's scheduler worth knowing:**
 
-- `cron` is **best-effort, not guaranteed**. Runs are frequently delayed during
-  peak load, especially on the hour. A `*/5` schedule realistically delivers a
-  check every 5–20 minutes. This is fine for trend monitoring; it is *not* a
-  pager, and shouldn't be treated as one.
+- `cron` is **best-effort, and in practice much slower than it looks**. This repo
+  asks for `*/5`. Measured over the first 20 scheduled runs, GitHub actually
+  delivered a check every **36–72 minutes**, averaging around 54. GitHub throttles
+  frequent schedules on public repositories, and no cron expression changes that —
+  asking for `*/1` would not help.
+
+  So treat the schedule as *roughly hourly*, not 5-minutely. This is fine for
+  trend and certificate monitoring; it is **not** a pager and must not be relied
+  on to catch a short outage. If you need genuinely continuous probing, the
+  options are an in-job loop (one workflow run that probes every 5 minutes for
+  ~50 minutes before exiting) or an external service such as UptimeRobot.
+  The dashboard measures the real interval and sizes its staleness warning off
+  that, so it stays honest either way.
 - Scheduled workflows are **disabled after 60 days of repository inactivity** —
   but because each run commits its results, the repo never goes inactive and the
   schedule sustains itself.
