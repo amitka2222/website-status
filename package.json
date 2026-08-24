@@ -1,0 +1,18 @@
+{
+  "name": "advtech-website-status",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Availability, performance and form monitoring for the ADvTECH website estate",
+  "scripts": {
+    "probe": "node scripts/probe.mjs",
+    "probe:forms": "node scripts/probe-forms.mjs",
+    "serve": "python -m http.server 8787 --directory docs"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

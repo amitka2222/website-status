@@ -161,6 +161,72 @@ Set the repository variable `FAIL_ON_DOWN` to `true` to make the Actions run go
 red when a site is down — GitHub then emails whoever watches the repo. That's the
 cheapest alerting available here.
 
+## Form monitoring
+
+Six application and enquiry forms are checked separately, by
+[`scripts/probe-forms.mjs`](scripts/probe-forms.mjs), configured in
+[`forms.json`](forms.json) and scheduled by
+[`.github/workflows/forms.yml`](.github/workflows/forms.yml).
+
+| Form | URL |
+| --- | --- |
+| Emeris — Undergraduate application | `portal.emeris.ac.za/application/undergrad-contact/application` |
+| Emeris — Programme enquiry | `www.emeris.ac.za/enquiry` |
+| Rosebank International — Application (step 1) | `portal.rbi.ac.za/application/application-form` |
+| Rosebank International — Enquiry | `www.rbi.ac.za/enquiry/` |
+| Capsicum — Programme enquiry | `portal.capsicumcooking.com/enquiry` |
+| Capsicum — Student signup | `student.capsicumcooking.com/signup/` |
+
+### These forms are never submitted
+
+The checks **load and inspect** each form. They do not fill it in and do not
+submit it. Submitting on a schedule would file real enquiries and applications
+into the admissions systems — at half-hourly checks that is nearly 300 fake leads
+a day, landing in front of the people who chase them. Do not add a submit step.
+
+### Why this needs a real browser
+
+A plain HTTP fetch cannot tell whether these forms work:
+
+- `www.emeris.ac.za/enquiry` returns **HTTP 200 with every dropdown empty** — the
+  options arrive by API afterwards.
+- `student.capsicumcooking.com/signup/` is an **Angular app**. Its HTML contains
+  no form at all; the entire thing is built by JavaScript after the bundle boots.
+
+So the form checks run headless Chromium via Playwright. That is also why they sit
+in their own workflow on a **30-minute** cadence — a browser run takes about a
+minute against the site check's five seconds, and keeping them separate means the
+heavier job can never delay or break the 5-minute availability check.
+
+### What is checked
+
+1. **The page loads** — HTTP status and navigation succeed.
+2. **The form renders** — the `waitFor` selector appears within 20s.
+3. **The fields a person needs are present** — every selector in `requiredFields`.
+4. **The campus dropdown carries real options** — not just a placeholder. An empty
+   campus list is a broken form that still returns 200 and looks perfectly healthy.
+5. **Expected copy is on the page** — where `expectText` is set.
+
+Console errors are recorded for context but do **not** fail a check; healthy pages
+routinely log noise from analytics and third-party embeds.
+
+### What is not yet covered
+
+**Qualification dropdowns.** On every one of these forms the qualification list is
+empty until a year and a campus have been chosen, and the required sequence
+differs per site — RBI needs *intake year → campus*, Emeris needs *registration
+type → mode of delivery → intake year → campus*. Each step is an API round-trip,
+so the checks are timing-sensitive and easy to make flaky.
+
+That matters, because a dead qualification feed is arguably the worst failure of
+all: the form looks fine and nobody can apply. It is deliberately left out for now
+rather than shipped as a check that cries wolf. `probe-forms.mjs` is structured to
+take a `cascade` block per form when it is worth doing properly.
+
+**Submission is never verified.** That the form renders does not prove a
+submission reaches the admissions system. Only a real submission proves that, and
+that is not something to automate.
+
 ## Adding API checks later
 
 The prober is already structured for it: `checkSite()` takes a row and returns a

@@ -1,0 +1,91 @@
+name: Monitor forms
+
+# Separate from the site check on purpose. This one drives a real browser, so it
+# takes about a minute rather than five seconds. Keeping it in its own workflow
+# means it can run on a slower cadence and can never delay or break the 5-minute
+# availability check.
+
+on:
+  schedule:
+    # Every 30 minutes. Browser-driven checks are heavier, and a broken application
+    # form is not something that needs 5-minute resolution to catch.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'forms.json'
+      - 'scripts/probe-forms.mjs'
+      - '.github/workflows/forms.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forms
+  cancel-in-progress: false
+
+jobs:
+  forms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Chromium is ~150MB; caching it keeps most runs to a few seconds of setup.
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check forms
+        run: node scripts/probe-forms.mjs
+
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/forms.json docs/data/forms-recent.json
+          if git diff --staged --quiet; then
+            echo "No change in form status - nothing to commit."
+            exit 0
+          fi
+          SUMMARY=$(node -e "const f=require('./docs/data/forms.json');console.log(\`\${f.up} ok, \${f.degraded} degraded, \${f.down} down\`)")
+          git commit -m "chore: form check - $SUMMARY [skip ci]"
+          # The 5-minute site check commits to the same branch; rebase and retry.
+          for i in 1 2 3 4 5; do
+            if git push; then exit 0; fi
+            git pull --rebase --autostash || true
+          done
+          echo "::error::Could not push form results after 5 attempts"
+          exit 1
+
+      - name: Job summary
+        if: always()
+        run: |
+          node -e "
+          const f = require('./docs/data/forms.json');
+          const lines = [
+            '## Forms: ' + f.up + ' ok, ' + f.degraded + ' degraded, ' + f.down + ' down',
+            '',
+            '| Form | State | Load | Detail |',
+            '| --- | --- | --- | --- |',
+          ];
+          for (const x of f.forms) {
+            lines.push('| ' + x.name + ' | ' + x.state + ' | ' + x.ms + 'ms | ' + (x.reason || 'OK') + ' |');
+          }
+          require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          " || echo "No form results to summarise"

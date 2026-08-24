@@ -1,0 +1,135 @@
+{
+  "_comment": [
+    "Application and enquiry forms checked with a real browser (see scripts/probe-forms.mjs).",
+    "These forms are JavaScript-driven, so a plain HTTP fetch cannot tell whether they work.",
+    "",
+    "Each entry supports:",
+    "  waitFor          - selector that must appear before the form counts as rendered",
+    "  requiredFields   - selectors that must exist; a missing one means the form is broken",
+    "  populatedSelects - dropdowns that must carry real options, not just a placeholder.",
+    "                     Only list dropdowns populated on page load. Ones filled by a",
+    "                     cascade (pick a year, then a campus) are deliberately excluded -",
+    "                     see the 'What is not yet covered' note in the README.",
+    "  expectText       - copy that must appear on the page",
+    "",
+    "NOTHING HERE IS EVER SUBMITTED. These checks load and inspect the form only."
+  ],
+
+  "forms": [
+    {
+      "id": "emeris-application",
+      "name": "Emeris - Undergraduate application",
+      "brand": "Emeris",
+      "division": "Tertiary",
+      "url": "https://portal.emeris.ac.za/application/undergrad-contact/application",
+      "waitFor": "[name='ctl00$MainContent$txt_SDFirstName']",
+      "requiredFields": [
+        "[name='ctl00$MainContent$ddl_QDCampus']",
+        "[name='ctl00$MainContent$ddl_QDQualification']",
+        "[name='ctl00$MainContent$txt_SDFirstName']",
+        "[name='ctl00$MainContent$txt_SDSurname']",
+        "[name='ctl00$MainContent$txt_SDEmailAddress']",
+        "[name='ctl00$MainContent$txt_SDMobileNumber']"
+      ],
+      "populatedSelects": [
+        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
+        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+      ],
+      "expectText": ""
+    },
+    {
+      "id": "emeris-enquiry",
+      "name": "Emeris - Programme enquiry",
+      "brand": "Emeris",
+      "division": "Tertiary",
+      "url": "https://www.emeris.ac.za/enquiry",
+      "waitFor": "[name='fx_firstName']",
+      "requiredFields": [
+        "[name='fx_registrationType']",
+        "[name='fx_campus']",
+        "[name='fx_qualifications']",
+        "[name='fx_firstName']",
+        "[name='fx_surname']",
+        "[name='fx_emailAddress']",
+        "[name='fx_mobileNumber']"
+      ],
+      "populatedSelects": [
+        { "selector": "[name='fx_registrationType']", "min": 2 },
+        { "selector": "[name='fx_intakeYear']", "min": 2 }
+      ],
+      "expectText": ""
+    },
+    {
+      "id": "rbi-application",
+      "name": "Rosebank International - Application (step 1)",
+      "brand": "Rosebank International",
+      "division": "Tertiary",
+      "url": "https://portal.rbi.ac.za/application/application-form?type=apply-contact",
+      "waitFor": "[name='ctl00$MainContent$ddl_QDCampus']",
+      "requiredFields": [
+        "[name='ctl00$MainContent$ddl_QDCampus']",
+        "[name='ctl00$MainContent$ddl_QDIntakeYear']",
+        "[name='ctl00$MainContent$ddl_QDQualification']"
+      ],
+      "populatedSelects": [
+        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
+        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+      ],
+      "expectText": ""
+    },
+    {
+      "id": "rbi-enquiry",
+      "name": "Rosebank International - Enquiry",
+      "brand": "Rosebank International",
+      "division": "Tertiary",
+      "url": "https://www.rbi.ac.za/enquiry/?type=enquire-contact",
+      "waitFor": "[name='firstname']",
+      "requiredFields": [
+        "[name='campus']",
+        "[name='qualification']",
+        "[name='firstname']",
+        "[name='surname']",
+        "[name='email']",
+        "[name='mobile_number']"
+      ],
+      "populatedSelects": [
+        { "selector": "[name='campus']", "min": 2 },
+        { "selector": "[name='intake_year']", "min": 2 }
+      ],
+      "expectText": ""
+    },
+    {
+      "id": "capsicum-enquiry",
+      "name": "Capsicum - Programme enquiry",
+      "brand": "Capsicum Culinary Studio",
+      "division": "Tertiary",
+      "url": "https://portal.capsicumcooking.com/enquiry",
+      "waitFor": "[name='ctl00$MainContent$txt_SDFirstName']",
+      "requiredFields": [
+        "[name='ctl00$MainContent$ddl_QDCampus']",
+        "[name='ctl00$MainContent$txt_SDFirstName']",
+        "[name='ctl00$MainContent$txt_SDSurname']",
+        "[name='ctl00$MainContent$txt_SDEmail']",
+        "[name='ctl00$MainContent$txt_SDMobileNumber']"
+      ],
+      "populatedSelects": [
+        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
+        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+      ],
+      "expectText": ""
+    },
+    {
+      "id": "capsicum-signup",
+      "name": "Capsicum - Student signup",
+      "brand": "Capsicum Culinary Studio",
+      "division": "Tertiary",
+      "url": "https://student.capsicumcooking.com/signup/",
+      "waitFor": "input[name='Application_Type']",
+      "requiredFields": [
+        "input[name='Application_Type']"
+      ],
+      "populatedSelects": [],
+      "expectText": "Create an Account"
+    }
+  ]
+}

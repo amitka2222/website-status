@@ -198,6 +198,11 @@
 
   .spark { display: block; }
   .empty { padding: 34px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
+  .note {
+    padding: 11px 16px; font-size: 12.5px; color: var(--text-muted);
+    border-top: 1px solid var(--border); background: var(--surface-2);
+  }
+  .form-name { font-weight: 560; }
 
   /* ---------------- tooltip ---------------- */
   #tip {
@@ -284,6 +289,24 @@
     <div class="empty" id="gridEmpty" hidden>No sites match those filters.</div>
   </div>
 
+  <div class="card" id="formsCard" hidden>
+    <h2>Application &amp; enquiry forms
+      <span class="muted" id="formsMeta"></span>
+    </h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th><th>Form</th><th class="num">Load</th><th>Recent</th>
+            <th class="num">Fields</th><th class="num">Campus list</th><th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="formRows"></tbody>
+      </table>
+    </div>
+    <div class="note" id="formsNote"></div>
+  </div>
+
   <div class="card">
     <h2>Recent incidents <span class="muted" id="incCount"></span></h2>
     <div class="scroll">
@@ -311,7 +334,8 @@
   var STALE_MULTIPLIER = 3;      // flag data as stale after N expected intervals
   var AUTO_REFRESH_MS  = 60000;
 
-  var state = { status: null, recent: null, incidents: [], sort: 'state', dir: 1 };
+  var state = { status: null, recent: null, incidents: [], forms: null,
+                formsRecent: null, sort: 'state', dir: 1 };
 
   // ---------------------------------------------------------- theme
   var themeBtn = document.getElementById('themeBtn');
@@ -593,7 +617,55 @@
     }).join('');
 
     renderGrid();
+    renderForms();
     renderIncidents();
+  }
+
+  function renderForms() {
+    var f = state.forms;
+    var card = document.getElementById('formsCard');
+    if (!f || !f.forms || !f.forms.length) { card.hidden = true; return; }
+    card.hidden = false;
+
+    var bad = f.down + f.degraded;
+    document.getElementById('formsMeta').textContent =
+      '(' + (bad ? bad + ' needing attention · ' : 'all ' + f.total + ' rendering · ') +
+      'checked ' + ago(f.generatedAt) + ')';
+
+    var pts = (state.formsRecent && state.formsRecent.points) || [];
+    document.getElementById('formRows').innerHTML = f.forms.slice().sort(function (a, b) {
+      return (STATE_RANK[a.state] - STATE_RANK[b.state]) || a.name.localeCompare(b.name);
+    }).map(function (x) {
+      var label = x.state === 'up' ? 'OK' : x.state === 'degraded' ? 'Degraded' : 'Down';
+      // Surface the campus dropdown size - an empty one is a broken form that
+      // still returns HTTP 200 and looks healthy from outside.
+      var counts = x.selectCounts || {};
+      var campusKey = Object.keys(counts).filter(function (k) { return /campus/i.test(k); })[0];
+      var campus = campusKey ? counts[campusKey] : null;
+      return '<tr>' +
+        '<td><span class="pill s-' + x.state + '"><span class="dot"></span>' + label + '</span></td>' +
+        '<td><a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer" class="form-name">' +
+          esc(x.name) + '</a><div class="site-brand">' + esc(x.brand || '') + '</div></td>' +
+        '<td class="num">' + (x.ms == null ? '—' : (x.ms / 1000).toFixed(1) + ' s') + '</td>' +
+        '<td><svg class="spark" data-form="' + esc(x.id) + '" width="110" height="26" role="img" ' +
+          'aria-label="Load time trend for ' + esc(x.name) + '"></svg></td>' +
+        '<td class="num">' + (x.fieldsChecked ? (x.fieldsChecked - x.fieldsMissing) + '/' + x.fieldsChecked : '—') + '</td>' +
+        '<td class="num">' + (campus == null ? '—' : campus) + '</td>' +
+        '<td class="reason">' + esc(x.reason || '') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.querySelectorAll('#formRows svg[data-form]').forEach(function (svg) {
+      var id = svg.getAttribute('data-form');
+      var vals = (state.formsRecent && state.formsRecent.series && state.formsRecent.series[id]) || [];
+      sparkline(svg, vals, pts);
+    });
+
+    document.getElementById('formsNote').textContent =
+      'Forms are loaded in a real browser every 30 minutes and inspected — never submitted. ' +
+      'Checks cover: the page loads, the fields a person needs are present, and the ' +
+      'campus dropdown carries real options. Qualification dropdowns load only after a ' +
+      'year and campus are chosen, so they are not yet verified.';
   }
 
   var STATE_RANK = { down: 0, degraded: 1, up: 2 };
@@ -720,9 +792,12 @@
         'the first monitoring run may not have finished yet.';
       return;
     }
-    state.status    = status;
-    state.recent    = await get('data/recent.json', { points: [], series: {} });
-    state.incidents = await get('data/incidents.json', []);
+    state.status      = status;
+    state.recent      = await get('data/recent.json', { points: [], series: {} });
+    state.incidents   = await get('data/incidents.json', []);
+    // Forms are optional - the page works fine before the first form check runs.
+    state.forms       = await get('data/forms.json', null);
+    state.formsRecent = await get('data/forms-recent.json', { points: [], series: {} });
 
     var sel = document.getElementById('fDivision');
     if (sel.options.length <= 1) {
