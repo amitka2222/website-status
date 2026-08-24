@@ -1,1 +1,1 @@
-{"points":["2026-08-24T09:34:07.904Z"],"series":{"emeris-application":[10602],"emeris-enquiry":[1738],"rbi-application":[4358],"rbi-enquiry":[1307],"capsicum-enquiry":[7179],"capsicum-signup":[4906]},"updatedAt":"2026-08-24T09:34:07.904Z"}
+{"points":["2026-08-24T09:34:07.904Z","2026-08-24T10:43:19.653Z"],"series":{"emeris-application":[10602,7534],"emeris-enquiry":[1738,1557],"rbi-application":[4358,5640],"rbi-enquiry":[1307,null],"capsicum-enquiry":[7179,4852],"capsicum-signup":[4906,5719]},"updatedAt":"2026-08-24T10:43:19.653Z"}
