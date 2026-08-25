@@ -1,7 +1,7 @@
-# ADvTECH Website Status
+# Advtech Website Status
 
 Continuous availability, performance and TLS certificate monitoring for the 37
-ADvTECH web properties — running entirely on GitHub, with a public status page
+Advtech web properties — running entirely on GitHub, with a public status page
 anyone can open without a licence or a login.
 
 > **Live dashboard:** https://amitka2222.github.io/website-status/
@@ -130,7 +130,7 @@ Removing a row also drops its history from the rolling window.
 
 ### Sites deliberately not monitored
 
-Four ADvTECH domains are **redirects to other properties**, not sites in their own
+Four Advtech domains are **redirects to other properties**, not sites in their own
 right, so they are excluded rather than counted as separate estate entries:
 
 | Domain | Redirects to |

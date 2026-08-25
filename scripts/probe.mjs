@@ -27,7 +27,7 @@ const MAX_REDIRECTS  = 10;
 const RETRIES        = 1;
 const RECENT_POINTS  = 288;    // rolling sparkline window
 
-const USER_AGENT = 'ADvTECH-SiteMonitor/1.0 (+availability monitoring)';
+const USER_AGENT = 'Advtech-SiteMonitor/1.0 (+availability monitoring)';
 
 // Some properties sit behind a Cloudflare bot challenge that returns 403 to every
 // automated client regardless of user agent or source IP. The site is perfectly
@@ -261,6 +261,34 @@ const nowIso = new Date().toISOString();
 const day    = nowIso.slice(0, 10);
 const month  = nowIso.slice(0, 7);
 
+// ---------------------------------------------------------------- vantage guard
+// When the monitor itself is being blocked, every site fails at once at the
+// network layer. Reporting that as 33 simultaneous outages is a lie, and one
+// that trains people to ignore the dashboard - the same failure the staleness
+// banner exists to prevent.
+//
+// So: if a large share of sites fail with no HTTP response at all (connection
+// reset, TLS handshake dropped) in a single run, the vantage point is the far
+// more likely culprit than the entire estate going dark in the same second.
+// Those become "cannot verify" and the run is flagged. Sites that answered with
+// a real HTTP error are untouched - a 500 is a genuine fault wherever you are.
+const VANTAGE_SUSPECT_RATIO = 0.4;
+
+const connectionFailures = results.filter(r => r.state === 'down' && !r.status);
+const vantageSuspect = connectionFailures.length / results.length >= VANTAGE_SUSPECT_RATIO;
+
+if (vantageSuspect) {
+  for (const r of connectionFailures) {
+    r.state = 'blocked';
+    r.reason = 'No connection, along with ' + (connectionFailures.length - 1) +
+               ' other sites in the same run - the monitor is being blocked at the ' +
+               'network layer, so this site could not be verified either way';
+  }
+  console.log('WARNING: ' + connectionFailures.length + ' of ' + results.length +
+              ' sites failed to connect in one run. Treating this as a blocked ' +
+              'vantage point rather than a mass outage.');
+}
+
 const counts = { up: 0, degraded: 0, down: 0, blocked: 0 };
 for (const r of results) counts[r.state]++;
 
@@ -272,6 +300,7 @@ writeJson(join(DATA, 'status.json'), {
   degraded: counts.degraded,
   down: counts.down,
   blocked: counts.blocked,
+  vantageSuspect: vantageSuspect,
   // Strip the response body before writing - it is only needed for the content check.
   sites: results.map(({ body, ...rest }) => rest),
 });
@@ -351,8 +380,14 @@ for (const r of results) {
       reason: r.reason || 'Unreachable',
     });
   } else if (r.state === 'blocked') {
-    // Leave any existing incident alone - we cannot tell whether it recovered.
-    continue;
+    // Once a site is blocked we lose visibility, so an open incident can never be
+    // resolved and would sit there reading "ongoing" forever. Close it and record
+    // that the outcome is unknown, rather than implying a permanent outage.
+    if (open) {
+      open.endedAt = nowIso;
+      open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);
+      open.reason = (open.reason || '') + ' - closed because monitoring was blocked; outcome unknown';
+    }
   } else if (r.state !== 'down' && open) {
     open.endedAt = nowIso;
     open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);

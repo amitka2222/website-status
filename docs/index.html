@@ -3,240 +3,299 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADvTECH Website Status</title>
-<meta name="description" content="Live availability, performance and certificate status for the ADvTECH website estate.">
+<title>Advtech Website Status</title>
+<meta name="description" content="Live availability, performance and certificate status for the Advtech website estate.">
 <style>
-  /* ---------------------------------------------------------------
-     Palette roles. Light values on :root, dark redefined under both
-     the OS media query and an explicit theme stamp so the toggle wins
-     in both directions.
-     --------------------------------------------------------------- */
+  /* ===================================================================
+     Advtech brand tokens, taken from the Headcount Dashboard baseline.
+
+     One deliberate departure: in that dashboard red is decorative chrome
+     (panel bullets, buttons, toggles). Here red is reserved for the logo
+     and for genuinely bad states. On a status page the reader's whole
+     question is "is anything red?", so decorative red would fire that
+     alarm on every render. Navy carries the structure instead.
+     =================================================================== */
   :root {
     color-scheme: light;
-    --surface-0:      #f4f4f1;   /* page */
-    --surface-1:      #fcfcfb;   /* cards */
-    --surface-2:      #eeeeea;   /* wells, track fills */
-    --border:         #dedcd6;
-    --border-strong:  #c9c7bf;
 
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #83817a;
+    --navy:        #1C3D72;
+    --navy-dk:     #142c53;
+    --navy-lt:     #2d508a;
+    --red:         #D81F25;
+    --red-dk:      #B01A1F;
 
-    --good:           #0ca30c;
-    --warning:        #fab219;
-    --serious:        #ec835a;
-    --critical:       #d03b3b;
+    --bg:          #f4f6fa;
+    --card:        #ffffff;
+    --well:        #eef2f9;
+    --line:        #e4e8f0;
+    --line-strong: #cfd7e6;
 
-    --series-1:       #2a78d6;
-    --series-dim:     #b7d3f6;
+    --ink:         #1a2233;
+    --muted:       #6b7688;
+    --faint:       #8d97a8;
 
-    --good-wash:      #0ca30c1f;
-    --warning-wash:   #fab2192e;
-    --critical-wash:  #d03b3b1f;
+    /* Status colours are the baseline's own pill palette, mapped onto our
+       four states, so they are on-brand and already contrast-paired. */
+    --up-bg:    #e3f3e8;  --up-fg:    #1e7a3d;
+    --deg-bg:   #fdefc4;  --deg-fg:   #8a6d00;
+    --down-bg:  #fde8e9;  --down-fg:  #b01a1f;
+    --blk-bg:   #eef1f7;  --blk-fg:   #6b7688;
 
-    --shadow: 0 1px 2px #0b0b0b0f, 0 4px 12px #0b0b0b0a;
+    --series-1:   #1C3D72;   /* sparklines follow the brand navy */
+    --header-bg:  linear-gradient(120deg, #1C3D72 0%, #142c53 100%);
+
+    --shadow: 0 1px 3px rgba(28,61,114,.08), 0 4px 16px rgba(28,61,114,.06);
   }
+
+  /* Dark mode is hand-stepped from the same brand family rather than
+     inverted - the navy header stays as the anchor in both modes. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-0:      #121211;
-      --surface-1:      #1a1a19;
-      --surface-2:      #24241f;
-      --border:         #34342e;
-      --border-strong:  #4a4a42;
+      --bg:          #0e1626;
+      --card:        #16203a;
+      --well:        #1e2b47;
+      --line:        #26324f;
+      --line-strong: #3a4a69;
 
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #8f8e83;
+      --ink:         #eaf0fa;
+      --muted:       #9aa8c0;
+      --faint:       #7d8aa3;
 
-      --series-1:       #3987e5;
-      --series-dim:     #1c5cab;
+      --navy:        #5b86c9;
+      --navy-lt:     #7aa5e8;
+      --red:         #f4555b;
 
-      --good-wash:      #0ca30c26;
-      --warning-wash:   #fab21926;
-      --critical-wash:  #d03b3b26;
+      --up-bg:   #12351f;  --up-fg:   #5ed188;
+      --deg-bg:  #3a2f0c;  --deg-fg:  #f0c94a;
+      --down-bg: #3d1417;  --down-fg: #f4767b;
+      --blk-bg:  #232c42;  --blk-fg:  #9aa8c0;
 
-      --shadow: 0 1px 2px #00000040, 0 4px 12px #00000030;
+      --series-1:  #7aa5e8;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-0:      #121211;
-    --surface-1:      #1a1a19;
-    --surface-2:      #24241f;
-    --border:         #34342e;
-    --border-strong:  #4a4a42;
+    --bg:          #0e1626;
+    --card:        #16203a;
+    --well:        #1e2b47;
+    --line:        #26324f;
+    --line-strong: #3a4a69;
 
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #8f8e83;
+    --ink:         #eaf0fa;
+    --muted:       #9aa8c0;
+    --faint:       #7d8aa3;
 
-    --series-1:       #3987e5;
-    --series-dim:     #1c5cab;
+    --navy:        #5b86c9;
+    --navy-lt:     #7aa5e8;
+    --red:         #f4555b;
 
-    --good-wash:      #0ca30c26;
-    --warning-wash:   #fab21926;
-    --critical-wash:  #d03b3b26;
+    --up-bg:   #12351f;  --up-fg:   #5ed188;
+    --deg-bg:  #3a2f0c;  --deg-fg:  #f0c94a;
+    --down-bg: #3d1417;  --down-fg: #f4767b;
+    --blk-bg:  #232c42;  --blk-fg:  #9aa8c0;
 
-    --shadow: 0 1px 2px #00000040, 0 4px 12px #00000030;
+    --series-1:  #7aa5e8;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
   }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    background: var(--surface-0);
-    color: var(--text-primary);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 15px;
-    line-height: 1.5;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1360px; margin: 0 auto; padding: 24px 20px 64px; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 0 24px 60px; }
 
-  /* ---------------- header ---------------- */
-  header.top {
-    display: flex; flex-wrap: wrap; gap: 16px;
-    align-items: baseline; justify-content: space-between;
-    margin-bottom: 20px;
+  /* ---------------- brand header ---------------- */
+  header.topbar {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 18px 0 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px rgba(20,44,83,.25);
   }
-  h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
-  .head-actions { display: flex; align-items: center; gap: 10px; }
+  .hd {
+    max-width: 1500px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .mark { flex-shrink: 0; }
+  .htxt h1 {
+    font-size: 22px; font-weight: 700; letter-spacing: .2px; margin: 0;
+    display: flex; align-items: baseline; gap: 1px; flex-wrap: wrap;
+  }
+  .htxt h1 .a { color: #fff; }
+  .htxt h1 .v { color: var(--red); }
+  .htxt h1 .rest { color: #fff; font-weight: 400; }
+  .htxt .sub { font-size: 12.5px; color: #b9c6e0; margin-top: 3px; font-weight: 400; }
+  .head-actions { margin-left: auto; display: flex; align-items: center; gap: 9px; }
   button.ghost {
-    background: var(--surface-1); color: var(--text-secondary);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 6px 11px; font: inherit; font-size: 13px; cursor: pointer;
+    background: rgba(255,255,255,.10); color: #dce5f5;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 8px;
+    padding: 7px 13px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: background .15s, color .15s;
   }
-  button.ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  button.ghost:hover { background: rgba(255,255,255,.20); color: #fff; }
+  button.ghost:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
   /* ---------------- hero ---------------- */
   .hero {
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 14px; padding: 22px 24px; margin-bottom: 16px;
-    box-shadow: var(--shadow);
-    display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
+    background: var(--card); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 20px; box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 20px;
+    align-items: center; justify-content: space-between;
+    position: relative; overflow: hidden;
   }
-  .hero-figure { font-size: 48px; font-weight: 660; line-height: 1.05; letter-spacing: -0.02em; }
-  .hero-note { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+  .hero-figure { font-size: 40px; font-weight: 700; line-height: 1.05; letter-spacing: -.5px; }
+  .hero-note { color: var(--muted); font-size: 13px; margin-top: 5px; }
   .hero-left { display: flex; align-items: center; gap: 18px; }
-  .hero-mark { width: 14px; height: 56px; border-radius: 4px; background: var(--good); flex: none; }
+  .hero-mark { width: 5px; height: 54px; border-radius: 3px; background: var(--up-fg); flex: none; }
 
   /* ---------------- banners ---------------- */
   .banner {
-    border-radius: 10px; padding: 11px 14px; margin-bottom: 16px;
-    font-size: 14px; display: flex; gap: 10px; align-items: flex-start;
-    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 15px; margin-bottom: 14px;
+    font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start;
+    border: 1px solid var(--line); border-left-width: 4px;
   }
-  .banner.warn     { background: var(--warning-wash);  border-color: #fab21966; }
-  .banner.info     { background: #ec835a1f;            border-color: #ec835a66; }
-  .banner.critical { background: var(--critical-wash); border-color: #d03b3b66; }
-  .banner b { font-weight: 620; }
+  .banner.warn     { background: var(--deg-bg);  border-color: var(--line); border-left-color: var(--deg-fg);  color: var(--deg-fg); }
+  .banner.critical { background: var(--down-bg); border-color: var(--line); border-left-color: var(--red);     color: var(--down-fg); }
+  .banner.info     { background: var(--blk-bg);  border-color: var(--line); border-left-color: var(--navy);    color: var(--ink); }
+  .banner b { font-weight: 700; }
 
-  /* ---------------- stat tiles ---------------- */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  /* ---------------- KPI tiles ---------------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .tile {
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow);
+    background: var(--card); border-radius: 12px; padding: 16px 18px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
   }
-  .tile .label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
-  .tile .value { font-size: 27px; font-weight: 640; margin-top: 3px; letter-spacing: -0.015em; }
-  .tile .foot  { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  /* Left accent bar, as in the baseline. Navy by default; red only on the
+     tile that actually means trouble. */
+  .tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--navy); }
+  .tile.bad::before  { background: var(--red); }
+  .tile.warn::before { background: var(--deg-fg); }
+  .tile.ok::before   { background: var(--up-fg); }
+  .tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+  .tile .value { font-size: 28px; font-weight: 700; color: var(--navy); margin-top: 6px; line-height: 1; }
+  .tile .foot  { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
 
   /* ---------------- filters ---------------- */
-  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-  input[type="search"], select {
-    background: var(--surface-1); color: var(--text-primary);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 7px 10px; font: inherit; font-size: 13px;
+  .filters {
+    background: var(--card); border-radius: 12px; padding: 14px 16px;
+    box-shadow: var(--shadow); margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   }
-  input[type="search"] { min-width: 230px; }
-  input[type="search"]:focus-visible, select:focus-visible, button:focus-visible {
-    outline: 2px solid var(--series-1); outline-offset: 1px;
+  input[type="search"], select {
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 11px; font: inherit; font-size: 13px;
+  }
+  input[type="search"] { min-width: 240px; }
+  input[type="search"]:focus-visible, select:focus-visible {
+    outline: 2px solid var(--navy); border-color: var(--navy);
   }
   .spacer { flex: 1 1 auto; }
-  .count { font-size: 13px; color: var(--text-muted); }
+  .count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
-  /* ---------------- table ---------------- */
+  /* ---------------- cards & tables ---------------- */
   .card {
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 22px;
+    background: var(--card); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 22px;
   }
   .card > h2 {
-    font-size: 14px; font-weight: 620; margin: 0;
-    padding: 13px 16px; border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 700; color: var(--navy); margin: 0;
+    padding: 15px 18px; display: flex; align-items: center; gap: 8px;
   }
-  .card > h2 .muted { color: var(--text-muted); font-weight: 450; }
+  /* The baseline's square bullet, in navy rather than red - see the note
+     at the top of this stylesheet. */
+  .card > h2::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--navy); flex: none; }
+  .card > h2 .muted { color: var(--muted); font-weight: 400; }
   .scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
-  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th {
-    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em;
-    color: var(--text-muted); font-weight: 600; background: var(--surface-1);
-    position: sticky; top: 0; z-index: 1; cursor: pointer; user-select: none;
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 9px 12px; white-space: nowrap; }
+  thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--navy); color: #fff;
+    font-size: 11px; font-weight: 600; letter-spacing: .3px;
+    cursor: pointer; user-select: none;
   }
-  th:hover { color: var(--text-secondary); }
-  th[aria-sort] { color: var(--text-primary); }
-  tbody tr:hover { background: var(--surface-2); }
+  thead th:hover { background: var(--navy-dk); }
+  tbody td { border-bottom: 1px solid var(--line); }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--well) 45%, transparent); }
+  tbody tr:hover { background: var(--well); }
   tbody tr:last-child td { border-bottom: none; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
-  a { color: var(--series-1); text-decoration: none; }
+  a { color: var(--navy); text-decoration: none; font-weight: 600; }
   a:hover { text-decoration: underline; }
-  .site-name { font-weight: 560; }
-  .site-brand { color: var(--text-muted); font-size: 12px; }
+  .site-name, .form-name { font-weight: 600; }
+  .site-brand { color: var(--muted); font-size: 11.5px; font-weight: 400; }
 
-  /* Status pill: colored dot + written label, so colour is never the only cue. */
-  .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 560; font-size: 12.5px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-  .s-up       .dot { background: var(--good); }
-  .s-degraded .dot { background: var(--warning); }
-  .s-down     .dot { background: var(--critical); }
-  .s-blocked  .dot { background: var(--serious); }
-  .s-down { color: var(--critical); font-weight: 640; }
-  .s-blocked { color: var(--serious); }
+  /* Status pill: tinted background + written label, so colour is never the
+     only cue. Taken straight from the baseline's pill system. */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: currentColor; }
+  .s-up      { background: var(--up-bg);   color: var(--up-fg); }
+  .s-degraded{ background: var(--deg-bg);  color: var(--deg-fg); }
+  .s-down    { background: var(--down-bg); color: var(--down-fg); }
+  .s-blocked { background: var(--blk-bg);  color: var(--blk-fg); }
 
-  .reason { color: var(--text-secondary); font-size: 12.5px; white-space: normal; min-width: 190px; }
-  .cert-crit { color: var(--critical); font-weight: 600; }
-  .cert-warn { font-weight: 600; }
+  .reason { color: var(--muted); font-size: 12px; white-space: normal; min-width: 190px; }
+  .cert-crit { color: var(--down-fg); font-weight: 700; }
+  .cert-warn { color: var(--deg-fg); font-weight: 700; }
 
   .spark { display: block; }
-  .empty { padding: 34px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
+  .empty { padding: 34px 16px; text-align: center; color: var(--muted); font-size: 13.5px; }
   .note {
-    padding: 11px 16px; font-size: 12.5px; color: var(--text-muted);
-    border-top: 1px solid var(--border); background: var(--surface-2);
+    padding: 12px 18px; font-size: 12px; color: var(--muted);
+    border-top: 1px solid var(--line); background: color-mix(in srgb, var(--well) 55%, transparent);
   }
-  .form-name { font-weight: 560; }
 
   /* ---------------- tooltip ---------------- */
   #tip {
     position: fixed; z-index: 50; pointer-events: none; opacity: 0;
-    transition: opacity .09s; background: var(--surface-1);
-    border: 1px solid var(--border-strong); border-radius: 8px;
-    padding: 7px 10px; font-size: 12.5px; box-shadow: var(--shadow);
-    max-width: 260px; color: var(--text-primary);
+    transition: opacity .09s; background: var(--navy-dk); color: #fff;
+    border-radius: 8px; padding: 7px 10px; font-size: 12px;
+    box-shadow: 0 4px 14px rgba(20,44,83,.35); max-width: 260px;
   }
-  #tip .t-label { color: var(--text-secondary); }
+  #tip .t-label { color: #b9c6e0; }
 
-  footer { color: var(--text-muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
+  footer { color: var(--faint); font-size: 11.5px; text-align: center; margin-top: 28px; line-height: 1.7; }
+
   @media (max-width: 640px) {
-    .hero-figure { font-size: 36px; }
-    .hero-mark { height: 44px; }
+    .hero-figure { font-size: 30px; }
+    .hero-mark { height: 42px; }
+    .htxt h1 { font-size: 17px; }
+    .head-actions { margin-left: 0; width: 100%; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <header class="top">
-    <div>
-      <h1>ADvTECH Website Status</h1>
+<header class="topbar">
+  <div class="hd">
+    <svg class="mark" width="40" height="40" viewBox="0 0 500 500" aria-hidden="true" focusable="false">
+      <path fill="#D81F25" d="M60 78 L108 92 L250 336 L392 92 L440 78 L250 478 Z"/>
+      <path fill="#fff"    d="M250 336 L124 82 L162 96 L250 262 L338 96 L376 82 Z"/>
+    </svg>
+    <div class="htxt">
+      <h1><span class="a">Ad</span><span class="v">v</span><span class="a">tech</span><span class="rest">&nbsp;· Website Status</span></h1>
       <div class="sub" id="subtitle">Loading…</div>
     </div>
     <div class="head-actions">
       <button class="ghost" id="themeBtn" type="button" aria-label="Toggle colour theme">Theme</button>
       <button class="ghost" id="refreshBtn" type="button">Refresh</button>
     </div>
-  </header>
+  </div>
+</header>
+
+<div class="wrap">
 
   <div id="banners"></div>
 
@@ -446,7 +505,7 @@
     if (!nums.length) {
       var none = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       none.setAttribute('x', 0); none.setAttribute('y', h / 2 + 4);
-      none.setAttribute('fill', 'var(--text-muted)');
+      none.setAttribute('fill', 'var(--muted)');
       none.setAttribute('font-size', '11');
       none.textContent = 'no data yet';
       svg.appendChild(none);
@@ -469,7 +528,7 @@
         tick.setAttribute('y', 0);
         tick.setAttribute('width', 2);
         tick.setAttribute('height', h);
-        tick.setAttribute('fill', 'var(--critical)');
+        tick.setAttribute('fill', 'var(--red)');
         tick.setAttribute('opacity', '0.85');
         svg.appendChild(tick);
       } else {
@@ -507,7 +566,7 @@
     var marker = document.createElementNS(ns, 'circle');
     marker.setAttribute('r', '3.5');
     marker.setAttribute('fill', 'var(--series-1)');
-    marker.setAttribute('stroke', 'var(--surface-1)');
+    marker.setAttribute('stroke', 'var(--card)');
     marker.setAttribute('stroke-width', '2');
     marker.setAttribute('opacity', '0');
     svg.appendChild(marker);
@@ -558,6 +617,14 @@
       banners.push('<div class="banner critical"><b>✕ ' + s.down + ' site' + (s.down > 1 ? 's' : '') +
         ' down:</b> ' + esc(names) + '</div>');
     }
+    if (s.vantageSuspect) {
+      banners.push('<div class="banner critical"><b>⚠ The monitor itself is being blocked.</b> ' +
+        'Most sites failed to connect in the same run, which almost always means this ' +
+        'monitor is being refused at the network layer — not that the estate went ' +
+        'down at once. Those sites are marked unverifiable rather than down. ' +
+        'Check the sites yourself before acting on anything below.</div>');
+    }
+
     var blockedSites = s.sites.filter(function (x) { return x.state === 'blocked'; });
     if (blockedSites.length) {
       banners.push('<div class="banner info"><b>ℹ ' + blockedSites.length + ' site' +
@@ -580,18 +647,18 @@
     // --- hero (exactly one hero figure on the page) ---
     var heroFig, heroLabel, heroColor;
     if (s.down > 0) {
-      heroFig = s.down + ' down'; heroColor = 'var(--critical)';
+      heroFig = s.down + ' down'; heroColor = 'var(--red)';
       heroLabel = 'of ' + s.total + ' sites — needs attention now';
     } else if (s.degraded > 0) {
-      heroFig = s.degraded + ' degraded'; heroColor = 'var(--warning)';
+      heroFig = s.degraded + ' degraded'; heroColor = 'var(--deg-fg)';
       heroLabel = 'of ' + s.total + ' sites — reachable, but something is off';
     } else if (blockedSites.length) {
       heroFig = (s.total - blockedSites.length) + ' of ' + s.total + ' up';
-      heroColor = 'var(--serious)';
+      heroColor = 'var(--blk-fg)';
       heroLabel = 'All verifiable sites are healthy — ' + blockedSites.length +
                   ' cannot be checked (see above)';
     } else {
-      heroFig = 'All ' + s.total + ' up'; heroColor = 'var(--good)';
+      heroFig = 'All ' + s.total + ' up'; heroColor = 'var(--up-fg)';
       heroLabel = 'Every monitored site is responding normally';
     }
     document.getElementById('heroFigure').textContent = heroFig;
@@ -626,19 +693,20 @@
     var openInc = state.incidents.filter(function (i) { return !i.endedAt; }).length;
 
     var tiles = [
-      { label: 'Healthy',        value: s.up,       foot: 'of ' + s.total + ' sites' },
-      { label: 'Degraded',       value: s.degraded, foot: 'reachable, with issues' },
-      { label: 'Down',           value: s.down,     foot: openInc ? openInc + ' open incident' + (openInc > 1 ? 's' : '') : 'no open incidents' },
+      { label: 'Healthy',        value: s.up,       foot: 'of ' + s.total + ' sites', cls: 'ok' },
+      { label: 'Degraded',       value: s.degraded, foot: 'reachable, with issues', cls: s.degraded ? 'warn' : '' },
+      { label: 'Down',           value: s.down,     foot: openInc ? openInc + ' open incident' + (openInc > 1 ? 's' : '') : 'no open incidents', cls: s.down ? 'bad' : '' },
       { label: 'Unverifiable',   value: s.blocked || 0, foot: (s.blocked ? 'blocked by bot protection' : 'all sites reachable') },
       { label: 'Availability',   value: estateUptime == null ? '—' : (estateUptime * 100).toFixed(2) + '%',
         foot: pts.length ? 'across last ' + pts.length + ' checks' : 'building history' },
       { label: 'Median response', value: median == null ? '—' : median + ' ms',
         foot: slowest ? 'slowest ' + slowest.site.replace(/^www\./, '') : '' },
       { label: 'Next cert expiry', value: minCert ? minCert.cert.days + ' d' : '—',
-        foot: minCert ? minCert.site : '' },
+        foot: minCert ? minCert.site : '',
+        cls: minCert ? (minCert.cert.days <= 7 ? 'bad' : minCert.cert.days <= 21 ? 'warn' : '') : '' },
     ];
     document.getElementById('tiles').innerHTML = tiles.map(function (t) {
-      return '<div class="tile"><div class="label">' + esc(t.label) + '</div>' +
+      return '<div class="tile' + (t.cls ? ' ' + t.cls : '') + '"><div class="label">' + esc(t.label) + '</div>' +
              '<div class="value">' + esc(t.value) + '</div>' +
              '<div class="foot">' + esc(t.foot) + '</div></div>';
     }).join('');

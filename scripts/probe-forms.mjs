@@ -49,9 +49,9 @@ console.log('Checking ' + forms.length + ' forms with a real browser...');
 for (const form of forms) {
   const context = await browser.newContext({
     viewport: { width: 1366, height: 900 },
-    // Identify honestly. These are ADvTECH's own properties.
+    // Identify honestly. These are Advtech's own properties.
     userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-               'Chrome/125.0.0.0 Safari/537.36 ADvTECH-SiteMonitor/1.0',
+               'Chrome/125.0.0.0 Safari/537.36 Advtech-SiteMonitor/1.0',
   });
   const page = await context.newPage();
 

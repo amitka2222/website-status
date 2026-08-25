@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Availability, performance and form monitoring for the ADvTECH website estate",
+  "description": "Availability, performance and form monitoring for the Advtech website estate",
   "scripts": {
     "probe": "node scripts/probe.mjs",
     "probe:forms": "node scripts/probe-forms.mjs",
