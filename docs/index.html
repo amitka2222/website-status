@@ -146,15 +146,15 @@
   /* ---------------- hero ---------------- */
   .hero {
     background: var(--card); border-radius: 12px;
-    padding: 20px 22px; margin-bottom: 20px; box-shadow: var(--shadow);
+    padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
     display: flex; flex-wrap: wrap; gap: 20px;
     align-items: center; justify-content: space-between;
     position: relative; overflow: hidden;
   }
-  .hero-figure { font-size: 40px; font-weight: 700; line-height: 1.05; letter-spacing: -.5px; }
+  .hero-figure { font-size: 34px; font-weight: 700; line-height: 1.05; letter-spacing: -.5px; }
   .hero-note { color: var(--muted); font-size: 13px; margin-top: 5px; }
   .hero-left { display: flex; align-items: center; gap: 18px; }
-  .hero-mark { width: 5px; height: 54px; border-radius: 3px; background: var(--up-fg); flex: none; }
+  .hero-mark { width: 5px; height: 44px; border-radius: 3px; background: var(--up-fg); flex: none; }
 
   /* ---------------- banners ---------------- */
   .banner {
@@ -168,9 +168,9 @@
   .banner b { font-weight: 700; }
 
   /* ---------------- KPI tiles ---------------- */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 18px; }
   .tile {
-    background: var(--card); border-radius: 12px; padding: 16px 18px;
+    background: var(--card); border-radius: 12px; padding: 12px 15px;
     box-shadow: var(--shadow); position: relative; overflow: hidden;
   }
   /* Left accent bar, as in the baseline. Navy by default; red only on the
@@ -180,7 +180,7 @@
   .tile.warn::before { background: var(--deg-fg); }
   .tile.ok::before   { background: var(--up-fg); }
   .tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
-  .tile .value { font-size: 28px; font-weight: 700; color: var(--navy); margin-top: 6px; line-height: 1; }
+  .tile .value { font-size: 24px; font-weight: 700; color: var(--navy); margin-top: 6px; line-height: 1; }
   .tile .foot  { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
 
   /* ---------------- filters ---------------- */
@@ -201,6 +201,18 @@
   .spacer { flex: 1 1 auto; }
   .count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    background: var(--well); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 20px; padding: 6px 13px; font: inherit; font-size: 12.5px;
+    font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--line-strong); }
+  .chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .chip .n { font-variant-numeric: tabular-nums; opacity: .75; font-weight: 700; }
+  .chip:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+
   /* ---------------- cards & tables ---------------- */
   .card {
     background: var(--card); border-radius: 12px;
@@ -216,9 +228,9 @@
   .card > h2 .muted { color: var(--muted); font-weight: 400; }
   .scroll { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
-  th, td { text-align: left; padding: 9px 12px; white-space: nowrap; }
+  th, td { text-align: left; padding: 7px 12px; white-space: nowrap; }
   thead th {
-    position: sticky; top: 0; z-index: 1;
+    position: sticky; top: var(--tabsH, 46px); z-index: 1;
     background: var(--navy); color: #fff;
     font-size: 11px; font-weight: 600; letter-spacing: .3px;
     cursor: pointer; user-select: none;
@@ -232,7 +244,7 @@
   a { color: var(--navy); text-decoration: none; font-weight: 600; }
   a:hover { text-decoration: underline; }
   .site-name, .form-name { font-weight: 600; }
-  .site-brand { color: var(--muted); font-size: 11.5px; font-weight: 400; }
+  .site-brand { color: var(--muted); font-size: 11.5px; font-weight: 400; margin-left: 6px; }
 
   /* Status pill: tinted background + written label, so colour is never the
      only cue. Taken straight from the baseline's pill system. */
@@ -258,6 +270,70 @@
     border-top: 1px solid var(--line); background: color-mix(in srgb, var(--well) 55%, transparent);
   }
 
+
+  /* ---------------- needs-attention summary ---------------- */
+  /* The whole point of the page: what is wrong, above the fold, before any
+     table. When everything is healthy this is hidden entirely. */
+  .attention {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 4px solid var(--red); border-radius: 12px;
+    padding: 15px 18px; margin-bottom: 20px; box-shadow: var(--shadow);
+  }
+  .attention.warn-only { border-left-color: var(--deg-fg); }
+  .attention h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); font-weight: 700; margin: 0 0 11px;
+  }
+  .attn-list { display: flex; flex-direction: column; gap: 8px; }
+  .attn-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; flex-wrap: wrap; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .attn-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .attn-what { font-weight: 600; }
+  .attn-why { color: var(--muted); font-size: 12.5px; }
+  .attn-go {
+    margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--navy);
+    background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 5px;
+  }
+  .attn-go:hover { background: var(--well); text-decoration: underline; }
+  .attn-more { font-size: 12.5px; color: var(--muted); padding-top: 2px; }
+
+  /* ---------------- tabs ---------------- */
+  .tabs {
+    display: flex; gap: 3px; flex-wrap: wrap;
+    border-bottom: 2px solid var(--line); margin-bottom: 18px;
+    position: sticky; top: 0; z-index: 6;
+    background: var(--bg); padding-top: 6px;
+  }
+  .tab {
+    background: none; border: none; border-bottom: 3px solid transparent;
+    margin-bottom: -2px; padding: 10px 15px; font: inherit; font-size: 13px;
+    font-weight: 700; color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; gap: 8px; border-radius: 7px 7px 0 0;
+  }
+  .tab:hover { color: var(--ink); background: var(--well); }
+  .tab[aria-selected="true"] { color: var(--navy); border-bottom-color: var(--navy); }
+  .tab:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .tab .badge {
+    background: var(--well); color: var(--muted);
+    border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .tab[aria-selected="true"] .badge { background: var(--navy); color: #fff; }
+  .tab .badge.bad  { background: var(--down-bg); color: var(--down-fg); }
+  .tab .badge.warn { background: var(--deg-bg);  color: var(--deg-fg); }
+  .tab[aria-selected="true"] .badge.bad  { background: var(--red); color: #fff; }
+  .tab[aria-selected="true"] .badge.warn { background: var(--deg-fg); color: #fff; }
+
+  .showmore {
+    display: block; width: 100%; background: none; border: none;
+    border-top: 1px solid var(--line); padding: 12px; font: inherit;
+    font-size: 12.5px; font-weight: 700; color: var(--navy); cursor: pointer;
+  }
+  .showmore:hover { background: var(--well); }
+
   /* ---------------- tooltip ---------------- */
   #tip {
     position: fixed; z-index: 50; pointer-events: none; opacity: 0;
@@ -270,10 +346,19 @@
   footer { color: var(--faint); font-size: 11.5px; text-align: center; margin-top: 28px; line-height: 1.7; }
 
   @media (max-width: 640px) {
-    .hero-figure { font-size: 30px; }
-    .hero-mark { height: 42px; }
+    .hero-figure { font-size: 28px; }
+    .hero-mark { height: 40px; }
     .htxt h1 { font-size: 17px; }
     .head-actions { margin-left: 0; width: 100%; }
+    .wrap { padding: 0 14px 48px; }
+    /* Tighter tabs so all four stay on one row rather than wrapping into a
+       91px sticky bar that eats the viewport on a phone. */
+    .tab { padding: 9px 9px; font-size: 12px; gap: 5px; }
+    .tab .badge { padding: 1px 5px; font-size: 10.5px; }
+    .tile .value { font-size: 21px; }
+    .tile { padding: 10px 12px; }
+    .attn-item { font-size: 12.5px; }
+    .attn-go { margin-left: 0; }
   }
 </style>
 </head>
@@ -316,16 +401,28 @@
 
   <section class="tiles" id="tiles"></section>
 
+  <div class="attention" id="attention" hidden>
+    <h3 id="attentionTitle">Needs attention</h3>
+    <div class="attn-list" id="attnList"></div>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Monitoring sections">
+    <button class="tab" data-tab="sites"     role="tab" aria-selected="true">Sites     <span class="badge" id="badgeSites"></span></button>
+    <button class="tab" data-tab="apis"      role="tab" aria-selected="false">APIs      <span class="badge" id="badgeApis"></span></button>
+    <button class="tab" data-tab="forms"     role="tab" aria-selected="false">Forms     <span class="badge" id="badgeForms"></span></button>
+    <button class="tab" data-tab="incidents" role="tab" aria-selected="false">Incidents <span class="badge" id="badgeIncidents"></span></button>
+  </nav>
+
+  <div class="tabpanel" data-panel="sites">
+
   <div class="filters">
     <input type="search" id="q" placeholder="Search site or brand…" aria-label="Search sites">
     <select id="fDivision" aria-label="Filter by division"><option value="">All divisions</option></select>
-    <select id="fState" aria-label="Filter by state">
-      <option value="">All states</option>
-      <option value="down">Down only</option>
-      <option value="degraded">Degraded only</option>
-      <option value="notup">Down + degraded</option>
-      <option value="up">Healthy only</option>
-    </select>
+    <div class="chips" role="group" aria-label="Filter by state">
+      <button class="chip" data-state=""      aria-pressed="true">All <span class="n" id="chipAll"></span></button>
+      <button class="chip" data-state="notup" aria-pressed="false">Needs attention <span class="n" id="chipBad"></span></button>
+      <button class="chip" data-state="up"    aria-pressed="false">Healthy <span class="n" id="chipOk"></span></button>
+    </div>
     <div class="spacer"></div>
     <span class="count" id="rowCount"></span>
   </div>
@@ -350,6 +447,8 @@
     </div>
     <div class="empty" id="gridEmpty" hidden>No sites match those filters.</div>
   </div>
+  </div>
+  <div class="tabpanel" data-panel="apis" hidden>
 
   <div class="card" id="apisCard" hidden>
     <h2>Shared APIs &amp; integrations <span class="muted" id="apisMeta"></span></h2>
@@ -363,6 +462,8 @@
     </div>
     <div class="note" id="apisNote"></div>
   </div>
+  </div>
+  <div class="tabpanel" data-panel="forms" hidden>
 
   <div class="card" id="formsCard" hidden>
     <h2>Application &amp; enquiry forms
@@ -381,6 +482,8 @@
     </div>
     <div class="note" id="formsNote"></div>
   </div>
+  </div>
+  <div class="tabpanel" data-panel="incidents" hidden>
 
   <div class="card">
     <h2>Recent incidents <span class="muted" id="incCount"></span></h2>
@@ -393,6 +496,7 @@
       </table>
     </div>
     <div class="empty" id="incEmpty" hidden>No incidents recorded.</div>
+  </div>
   </div>
 
   <footer>
@@ -410,7 +514,8 @@
   var AUTO_REFRESH_MS  = 60000;
 
   var state = { status: null, recent: null, incidents: [], apis: null, forms: null,
-                formsRecent: null, sort: 'state', dir: 1 };
+                formsRecent: null, sort: 'state', dir: 1,
+                tab: 'sites', incLimit: 15, stateFilter: '' };
 
   // ---------------------------------------------------------- theme
   var themeBtn = document.getElementById('themeBtn');
@@ -624,12 +729,6 @@
         esc(ago(s.generatedAt)) + ', but checks are expected every ~' + interval +
         ' minutes. The monitoring workflow may have stopped — everything below could be out of date.</div>');
     }
-    if (s.down > 0) {
-      var names = s.sites.filter(function (x) { return x.state === 'down'; })
-                         .map(function (x) { return x.site; }).join(', ');
-      banners.push('<div class="banner critical"><b>✕ ' + s.down + ' site' + (s.down > 1 ? 's' : '') +
-        ' down:</b> ' + esc(names) + '</div>');
-    }
     if (s.vantageSuspect) {
       banners.push('<div class="banner critical"><b>⚠ The monitor itself is being blocked.</b> ' +
         'Most sites failed to connect in the same run, which almost always means this ' +
@@ -640,21 +739,14 @@
 
     var blockedSites = s.sites.filter(function (x) { return x.state === 'blocked'; });
     if (blockedSites.length) {
+      // Which sites are blocked is listed below; what a reader cannot infer from a
+      // pill is that the site is probably fine and the fix is an allowlist.
       banners.push('<div class="banner info"><b>ℹ ' + blockedSites.length + ' site' +
-        (blockedSites.length > 1 ? 's' : '') + ' cannot be verified:</b> ' +
-        esc(blockedSites.map(function (x) { return x.site; }).join(', ')) +
-        ' — bot protection is returning HTTP 403 to this monitor. The site is almost ' +
-        'certainly fine for real visitors; we simply cannot confirm it. Allowlist the ' +
-        'monitor in the CDN/WAF to restore coverage.</div>');
+        (blockedSites.length > 1 ? 's are' : ' is') + ' unverifiable.</b> Bot protection is ' +
+        'refusing this monitor, so we cannot confirm the state either way — real visitors ' +
+        'are almost certainly fine. Allowlist the monitor in the CDN/WAF to restore coverage.</div>');
     }
 
-    var expiring = s.sites.filter(function (x) { return x.cert && x.cert.days != null && x.cert.days <= 21; });
-    if (expiring.length) {
-      expiring.sort(function (a, b) { return a.cert.days - b.cert.days; });
-      banners.push('<div class="banner warn"><b>⚠ ' + expiring.length +
-        ' certificate' + (expiring.length > 1 ? 's' : '') + ' expiring within 21 days:</b> ' +
-        esc(expiring.map(function (x) { return x.site + ' (' + x.cert.days + 'd)'; }).join(', ')) + '</div>');
-    }
     document.getElementById('banners').innerHTML = banners.join('');
 
     // --- hero (exactly one hero figure on the page) ---
@@ -728,6 +820,105 @@
     renderApis();
     renderForms();
     renderIncidents();
+    renderAttention();
+
+    // Badges carry the count, and colour when that section holds something bad.
+    setBadge('badgeSites', s.total, s.down > 0,
+             ((s.degraded || 0) + (s.blocked || 0)) > 0);
+    var ap = state.apis;
+    setBadge('badgeApis', ap ? ap.total : 0, !!(ap && ap.down > 0),
+             !!(ap && ((ap.degraded || 0) + (ap.blocked || 0)) > 0));
+    var fm = state.forms;
+    setBadge('badgeForms', fm ? fm.total : 0, !!(fm && fm.down > 0),
+             !!(fm && ((fm.degraded || 0) + (fm.blocked || 0)) > 0));
+    var stillOpen = state.incidents.filter(function (i) { return !i.endedAt; }).length;
+    setBadge('badgeIncidents', state.incidents.length, stillOpen > 0, false);
+
+    syncTabHeight();
+  }
+
+  // ---------------------------------------------------------- tabs
+  var TABS = ['sites', 'apis', 'forms', 'incidents'];
+
+  function showTab(name) {
+    if (TABS.indexOf(name) === -1) name = 'sites';
+    state.tab = name;
+    document.querySelectorAll('.tabpanel').forEach(function (panel) {
+      panel.hidden = panel.getAttribute('data-panel') !== name;
+    });
+    document.querySelectorAll('.tab').forEach(function (btn) {
+      btn.setAttribute('aria-selected', String(btn.getAttribute('data-tab') === name));
+    });
+    // Deep-linkable, so a tab can be bookmarked or shared.
+    try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    // Sparklines drawn in a hidden panel come out zero-width, so redraw on reveal.
+    if (state.status) {
+      if (name === 'sites') renderGrid();
+      if (name === 'apis') renderApis();
+      if (name === 'forms') renderForms();
+    }
+  }
+
+  function setBadge(id, total, bad, warn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = total;
+    el.className = 'badge' + (bad ? ' bad' : warn ? ' warn' : '');
+  }
+
+  // Keeps the sticky table header from sliding under the sticky tab bar.
+  function syncTabHeight() {
+    var tabs = document.getElementById('tabs');
+    if (tabs) document.documentElement.style.setProperty('--tabsH', tabs.offsetHeight + 'px');
+  }
+
+  // ------------------------------------------------ needs-attention summary
+  function renderAttention() {
+    var s = state.status;
+    var items = [];
+
+    (s ? s.sites : []).forEach(function (x) {
+      if (x.state !== 'up') items.push({ rank: STATE_RANK[x.state], tab: 'sites',
+        what: x.site, why: x.reason || x.state, state: x.state });
+    });
+    if (state.apis && state.apis.apis) state.apis.apis.forEach(function (x) {
+      if (x.state !== 'up') items.push({ rank: STATE_RANK[x.state] - 0.5, tab: 'apis',
+        what: x.name + (x.usedBy > 1 ? ' (' + x.usedBy + ' sites rely on it)' : ''),
+        why: x.reason || x.state, state: x.state });
+    });
+    if (state.forms && state.forms.forms) state.forms.forms.forEach(function (x) {
+      if (x.state !== 'up') items.push({ rank: STATE_RANK[x.state] - 0.25, tab: 'forms',
+        what: x.name, why: x.reason || x.state, state: x.state });
+    });
+
+    var box = document.getElementById('attention');
+    if (!items.length) { box.hidden = true; return; }
+    box.hidden = false;
+
+    // A broken shared API outranks a single slow site; nothing outranks an outage.
+    items.sort(function (a, b) { return a.rank - b.rank; });
+    var worst = items[0].state;
+    box.className = 'attention' + (worst === 'degraded' || worst === 'blocked' ? ' warn-only' : '');
+
+    document.getElementById('attentionTitle').textContent =
+      items.length === 1 ? '1 thing needs attention' : items.length + ' things need attention';
+
+    var shown = items.slice(0, 8);
+    document.getElementById('attnList').innerHTML = shown.map(function (i) {
+      var label = i.state === 'degraded' ? 'Degraded' : i.state === 'blocked' ? 'Blocked' : 'Down';
+      return '<div class="attn-item">' +
+        '<span class="pill s-' + i.state + '"><span class="dot"></span>' + label + '</span>' +
+        '<span class="attn-what">' + esc(i.what) + '</span>' +
+        '<span class="attn-why">' + esc(i.why) + '</span>' +
+        '<button class="attn-go" data-goto="' + i.tab + '">View in ' + i.tab + ' &rarr;</button>' +
+      '</div>';
+    }).join('') + (items.length > shown.length
+      ? '<div class="attn-more">' + (items.length - shown.length) + ' more \u2014 see the tabs below.</div>'
+      : '');
+
+    document.querySelectorAll('#attnList .attn-go').forEach(function (b) {
+      b.addEventListener('click', function () { showTab(b.getAttribute('data-goto')); });
+    });
   }
 
   function renderApis() {
@@ -753,7 +944,7 @@
       return '<tr>' +
         '<td><span class="pill s-' + x.state + '"><span class="dot"></span>' + label + '</span></td>' +
         '<td><a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer" class="form-name">' +
-          esc(x.name) + '</a><div class="site-brand">' + esc(x.url.replace(/^https?:\/\//, '').slice(0, 62)) + '</div></td>' +
+          esc(x.name) + '</a> <span class="site-brand">' + esc(x.url.replace(/^https?:\/\//, '').slice(0, 52)) + '</span></td>' +
         '<td>' + esc(x.owner || '') + '</td>' +
         '<td class="num">' + (x.ms == null ? '—' : x.ms + ' ms') + '</td>' +
         '<td class="num">' + blast + '</td>' +
@@ -794,9 +985,9 @@
       return '<tr>' +
         '<td><span class="pill s-' + x.state + '"><span class="dot"></span>' + label + '</span></td>' +
         '<td><a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer" class="form-name">' +
-          esc(x.name) + '</a><div class="site-brand">' + esc(x.brand || '') + '</div></td>' +
+          esc(x.name) + '</a> <span class="site-brand">' + esc(x.brand || '') + '</span></td>' +
         '<td class="num">' + (x.ms == null ? '—' : (x.ms / 1000).toFixed(1) + ' s') + '</td>' +
-        '<td><svg class="spark" data-form="' + esc(x.id) + '" width="110" height="26" role="img" ' +
+        '<td><svg class="spark" data-form="' + esc(x.id) + '" width="110" height="20" role="img" ' +
           'aria-label="Load time trend for ' + esc(x.name) + '"></svg></td>' +
         '<td class="num">' + (x.fieldsChecked ? (x.fieldsChecked - x.fieldsMissing) + '/' + x.fieldsChecked : '—') + '</td>' +
         '<td class="num">' + (campus == null ? '—' : campus) + '</td>' +
@@ -823,7 +1014,7 @@
     var s = state.status;
     var q = document.getElementById('q').value.trim().toLowerCase();
     var fDiv = document.getElementById('fDivision').value;
-    var fState = document.getElementById('fState').value;
+    var fState = state.stateFilter;
 
     var rows = s.sites.filter(function (x) {
       if (q && (x.site + ' ' + (x.brand || '') + ' ' + (x.division || '')).toLowerCase().indexOf(q) === -1) return false;
@@ -856,6 +1047,20 @@
       rows.length === s.sites.length ? s.sites.length + ' sites'
                                      : rows.length + ' of ' + s.sites.length + ' sites';
 
+    // Chip counts respect the search and division filters, so they always match
+    // what clicking them would actually show.
+    var scoped = s.sites.filter(function (x) {
+      if (q && (x.site + ' ' + (x.brand || '') + ' ' + (x.division || '')).toLowerCase().indexOf(q) === -1) return false;
+      if (fDiv && x.division !== fDiv) return false;
+      return true;
+    });
+    document.getElementById('chipAll').textContent = scoped.length;
+    document.getElementById('chipBad').textContent = scoped.filter(function (x) { return x.state !== 'up'; }).length;
+    document.getElementById('chipOk').textContent  = scoped.filter(function (x) { return x.state === 'up'; }).length;
+    document.querySelectorAll('.chip').forEach(function (c) {
+      c.setAttribute('aria-pressed', String(c.getAttribute('data-state') === state.stateFilter));
+    });
+
     var tbody = document.getElementById('rows');
     tbody.innerHTML = rows.map(function (x, i) {
       var up = uptimeFor(x.site);
@@ -869,16 +1074,16 @@
                 : x.state === 'degraded' ? 'Degraded'
                 : x.state === 'blocked' ? 'Blocked' : 'Down';
       var redirectNote = x.redirected
-        ? '<div class="site-brand">→ ' + esc(x.finalUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</div>'
+        ? ' <span class="site-brand">→ ' + esc(x.finalUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</span>'
         : '';
       return '<tr>' +
         '<td><span class="pill s-' + x.state + '"><span class="dot"></span>' + label + '</span></td>' +
         '<td><a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer" class="site-name">' +
           esc(x.site) + '</a>' +
-          '<div class="site-brand">' + esc(x.brand || '') + '</div>' + redirectNote + '</td>' +
+          (x.brand ? ' <span class="site-brand">' + esc(x.brand) + '</span>' : '') + redirectNote + '</td>' +
         '<td>' + esc(x.division || '') + '</td>' +
         '<td class="num">' + (x.ms == null ? '—' : x.ms + ' ms') + '</td>' +
-        '<td><svg class="spark" data-site="' + esc(x.site) + '" width="110" height="26" role="img" ' +
+        '<td><svg class="spark" data-site="' + esc(x.site) + '" width="110" height="20" role="img" ' +
           'aria-label="Response time trend for ' + esc(x.site) + '"></svg></td>' +
         '<td class="num">' + (up == null ? '—' : (up * 100).toFixed(1) + '%') + '</td>' +
         '<td class="num ' + certCls + '">' + certTxt + '</td>' +
@@ -905,7 +1110,7 @@
   }
 
   function renderIncidents() {
-    var inc = state.incidents.slice(0, 40);
+    var inc = state.incidents.slice(0, state.incLimit);
     document.getElementById('incCount').textContent =
       state.incidents.length ? '(' + state.incidents.length + ' recorded)' : '';
     document.getElementById('incEmpty').hidden = inc.length > 0;
@@ -919,6 +1124,20 @@
         '<td class="reason">' + esc(i.reason || '') + '</td>' +
       '</tr>';
     }).join('');
+
+    var more = document.getElementById('incMore');
+    if (more) more.remove();
+    if (state.incidents.length > state.incLimit) {
+      var btn = document.createElement('button');
+      btn.id = 'incMore';
+      btn.className = 'showmore';
+      btn.textContent = 'Show all ' + state.incidents.length + ' incidents';
+      btn.addEventListener('click', function () {
+        state.incLimit = 500;
+        renderIncidents();
+      });
+      document.getElementById('incRows').closest('.card').appendChild(btn);
+    }
   }
 
   // ---------------------------------------------------------- data loading
@@ -967,8 +1186,20 @@
   // ---------------------------------------------------------- wiring
   document.getElementById('q').addEventListener('input', renderGrid);
   document.getElementById('fDivision').addEventListener('change', renderGrid);
-  document.getElementById('fState').addEventListener('change', renderGrid);
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      state.stateFilter = c.getAttribute('data-state');
+      renderGrid();
+    });
+  });
   document.getElementById('refreshBtn').addEventListener('click', load);
+
+  document.querySelectorAll('.tab').forEach(function (btn) {
+    btn.addEventListener('click', function () { showTab(btn.getAttribute('data-tab')); });
+  });
+  window.addEventListener('hashchange', function () { showTab(location.hash.replace('#', '')); });
+  window.addEventListener('resize', syncTabHeight);
+  showTab(location.hash.replace('#', '') || 'sites');
 
   document.querySelectorAll('#grid th[data-sort]').forEach(function (th) {
     th.addEventListener('click', function () {

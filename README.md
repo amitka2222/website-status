@@ -104,6 +104,24 @@ To change it, edit the `cron` line in
   but because each run commits its results, the repo never goes inactive and the
   schedule sustains itself.
 
+## Reading the dashboard
+
+The page is built so the question *"is anything wrong?"* is answered without
+scrolling, and nothing is repeated:
+
+1. **Banners** — reserved for problems with the **monitor itself**: stale data, or
+   a blocked vantage point. Nothing item-level appears here.
+2. **Hero + KPI tiles** — the estate in one line and seven numbers.
+3. **Needs attention** — every failing site, API and form in one ranked list, worst
+   first, each with a jump link. Hidden entirely when everything is healthy. A
+   broken shared API outranks a single slow site.
+4. **Tabs** — Sites / APIs / Forms / Incidents, one table at a time, each badge
+   coloured when that section holds something bad. Deep-linkable (`#apis`).
+
+Within Sites, the **All / Needs attention / Healthy** chips filter in one click and
+their counts respect the search and division filters, so they always match what
+clicking them shows.
+
 ## The staleness guard
 
 The dashboard's most important feature is the one that admits when it's broken.
