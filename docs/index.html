@@ -226,11 +226,16 @@
      at the top of this stylesheet. */
   .card > h2::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--navy); flex: none; }
   .card > h2 .muted { color: var(--muted); font-weight: 400; }
-  .scroll { overflow-x: auto; }
+  .scroll { overflow: auto; }
+  @media (min-width: 900px) {
+    /* Only the site table is long enough to need this; APIs, forms and
+       incidents are short and scroll with the page. */
+    .tabpanel[data-panel="sites"] .scroll { max-height: 62vh; }
+  }
   table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
   th, td { text-align: left; padding: 7px 12px; white-space: nowrap; }
   thead th {
-    position: sticky; top: var(--tabsH, 46px); z-index: 1;
+    position: sticky; top: 0; z-index: 1;
     background: var(--navy); color: #fff;
     font-size: 11px; font-weight: 600; letter-spacing: .3px;
     cursor: pointer; user-select: none;
@@ -834,7 +839,6 @@
     var stillOpen = state.incidents.filter(function (i) { return !i.endedAt; }).length;
     setBadge('badgeIncidents', state.incidents.length, stillOpen > 0, false);
 
-    syncTabHeight();
   }
 
   // ---------------------------------------------------------- tabs
@@ -864,12 +868,6 @@
     if (!el) return;
     el.textContent = total;
     el.className = 'badge' + (bad ? ' bad' : warn ? ' warn' : '');
-  }
-
-  // Keeps the sticky table header from sliding under the sticky tab bar.
-  function syncTabHeight() {
-    var tabs = document.getElementById('tabs');
-    if (tabs) document.documentElement.style.setProperty('--tabsH', tabs.offsetHeight + 'px');
   }
 
   // ------------------------------------------------ needs-attention summary
@@ -1198,7 +1196,6 @@
     btn.addEventListener('click', function () { showTab(btn.getAttribute('data-tab')); });
   });
   window.addEventListener('hashchange', function () { showTab(location.hash.replace('#', '')); });
-  window.addEventListener('resize', syncTabHeight);
   showTab(location.hash.replace('#', '') || 'sites');
 
   document.querySelectorAll('#grid th[data-sort]').forEach(function (th) {

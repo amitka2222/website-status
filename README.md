@@ -122,6 +122,11 @@ Within Sites, the **All / Needs attention / Healthy** chips filter in one click 
 their counts respect the search and division filters, so they always match what
 clicking them shows.
 
+On screens wider than 900px the site table gets its own scroll area
+(`max-height: 62vh`), so its header stays pinned while you scan and the page
+stops growing with the table. Below that width the nested scroll is dropped —
+on a phone the page scrolls perfectly well by itself.
+
 ## The staleness guard
 
 The dashboard's most important feature is the one that admits when it's broken.
