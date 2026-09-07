@@ -26,6 +26,10 @@ const CERT_WARN_DAYS = 21;     // cert expiring sooner than this counts as Degra
 const MAX_REDIRECTS  = 10;
 const RETRIES        = 1;
 const RECENT_POINTS  = 288;    // rolling sparkline window
+// APIs are not pages. SLOW_MS (8s) is sized for a full page load from a US
+// runner; the STASY endpoints answer in 40-70ms, so reusing it would let a
+// 100x regression pass as healthy. Per-endpoint `slowMs` overrides this.
+const API_SLOW_MS    = 2500;
 
 const USER_AGENT = 'Advtech-SiteMonitor/1.0 (+availability monitoring)';
 
@@ -212,6 +216,52 @@ async function checkSite(site) {
   };
 }
 
+// Shared API endpoints (apis.json). Same transport as the site checks - these are
+// plain read-only GETs. Nothing in apis.json may have a side effect; see the rules
+// at the top of that file, and the doNotProbe list of endpoints that must never
+// be called on a schedule.
+async function checkApi(api) {
+  let result;
+  for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    result = await probe(api.url);
+    if (!result.error) break;
+    if (attempt < RETRIES) await new Promise(r => setTimeout(r, 1500));
+  }
+
+  const blocked = isBotChallenge(result.status, result.headers, result.body);
+  const expected = api.expectStatus || 200;
+  const statusOk = result.status === expected;
+  const needle = (api.expectContains || '').trim();
+  const contentOk = needle ? (result.body || '').includes(needle) : null;
+
+  const reasons = [];
+  if (blocked) reasons.push('Blocked by bot protection (HTTP ' + result.status + ') - cannot verify');
+  else if (result.error) reasons.push(result.error);
+  else if (!statusOk) reasons.push('HTTP ' + result.status + ' (expected ' + expected + ')');
+  if (statusOk && contentOk === false) reasons.push('Response did not contain "' + needle + '"');
+  const slowLimit = api.slowMs || API_SLOW_MS;
+  if (statusOk && result.ms > slowLimit) reasons.push('Slow (' + (result.ms / 1000).toFixed(1) + 's, expected under ' + (slowLimit / 1000) + 's)');
+
+  const state = blocked ? 'blocked'
+              : (result.error || !statusOk || contentOk === false) ? 'down'
+              : reasons.length ? 'degraded'
+              : 'up';
+
+  return {
+    id: api.id,
+    name: api.name,
+    owner: api.owner,
+    url: api.url,
+    usedBy: api.usedBy || 0,
+    why: api.why || '',
+    state,
+    status: result.status || 0,
+    ms: typeof result.ms === 'number' ? result.ms : null,
+    contentOk,
+    reason: reasons.join('; '),
+  };
+}
+
 async function runPool(items, worker, limit) {
   const out = new Array(items.length);
   let next = 0;
@@ -257,6 +307,24 @@ console.log('Probing ' + sites.length + ' sites...');
 const results = (await runPool(sites, checkSite, CONCURRENCY))
   .sort((a, b) => a.site.localeCompare(b.site));
 
+// ---------------------------------------------------------------- API checks
+let apiResults = [];
+let apiConfigError = null;
+const apiFile = join(ROOT, 'apis.json');
+if (existsSync(apiFile)) {
+  try {
+    const apiCfg = JSON.parse(readFileSync(apiFile, 'utf8'));
+    const apis = apiCfg.apis || [];
+    if (apis.length) {
+      console.log('Checking ' + apis.length + ' shared API endpoints...');
+      apiResults = (await runPool(apis, checkApi, CONCURRENCY)).sort((a, b) => a.id.localeCompare(b.id));
+    }
+  } catch (err) {
+    apiConfigError = err.message;
+    console.log('Could not read apis.json: ' + err.message);
+  }
+}
+
 const nowIso = new Date().toISOString();
 const day    = nowIso.slice(0, 10);
 const month  = nowIso.slice(0, 7);
@@ -284,6 +352,16 @@ if (vantageSuspect) {
                ' other sites in the same run - the monitor is being blocked at the ' +
                'network layer, so this site could not be verified either way';
   }
+  // The APIs are reached over the same network, so they are just as unverifiable.
+  // Without this the site table would honestly say "cannot verify" while the API
+  // card screamed that the estate's biggest shared dependency was down.
+  for (const r of apiResults) {
+    if (r.state === 'down' && !r.status) {
+      r.state = 'blocked';
+      r.reason = 'No connection during a run where the monitor was blocked at the ' +
+                 'network layer - this endpoint could not be verified either way';
+    }
+  }
   console.log('WARNING: ' + connectionFailures.length + ' of ' + results.length +
               ' sites failed to connect in one run. Treating this as a blocked ' +
               'vantage point rather than a mass outage.');
@@ -304,6 +382,29 @@ writeJson(join(DATA, 'status.json'), {
   // Strip the response body before writing - it is only needed for the content check.
   sites: results.map(({ body, ...rest }) => rest),
 });
+
+// --- 1b. Shared API endpoints -------------------------------------------
+// Written unconditionally. If this only ran when there were results, a typo in
+// apis.json would leave the previous run's file in place and the dashboard would
+// keep showing those states as current, with nothing to indicate they were stale.
+{
+  const apiCounts = { up: 0, degraded: 0, down: 0, blocked: 0 };
+  for (const r of apiResults) apiCounts[r.state]++;
+  writeJson(join(DATA, 'apis.json'), {
+    generatedAt: nowIso,
+    total: apiResults.length,
+    ...apiCounts,
+    configError: apiConfigError,
+    apis: apiResults,
+  });
+  if (apiResults.length) {
+    console.log('APIs: ' + apiCounts.up + ' ok, ' + apiCounts.degraded + ' degraded, ' +
+                apiCounts.down + ' down, ' + apiCounts.blocked + ' blocked');
+    for (const r of apiResults.filter(x => x.state !== 'up')) {
+      console.log('  [' + r.state.toUpperCase() + '] ' + r.id + ' - ' + r.reason);
+    }
+  }
+}
 
 // --- 2. Rolling sparkline window (column-oriented to keep the file small) -
 const recent = readJson(join(DATA, 'recent.json'), { points: [], series: {} });
@@ -393,6 +494,33 @@ for (const r of results) {
     open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);
   }
 }
+// APIs feed the same log. A three-hour STASY outage breaks applications across
+// 15 sites; without this it would vanish from the record the moment it recovered.
+for (const r of apiResults) {
+  const key = 'API: ' + r.name;
+  const open = incidents.filter(i => i.site === key && !i.endedAt)[0];
+  if (r.state === 'down' && !open) {
+    incidents.unshift({
+      id: r.id + '-' + nowIso,
+      site: key,
+      brand: r.owner,
+      kind: 'api',
+      startedAt: nowIso,
+      endedAt: null,
+      minutes: null,
+      status: r.status,
+      reason: r.reason || 'Unreachable',
+    });
+  } else if (r.state === 'blocked' && open) {
+    open.endedAt = nowIso;
+    open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);
+    open.reason = (open.reason || '') + ' - closed because monitoring was blocked; outcome unknown';
+  } else if (r.state !== 'down' && r.state !== 'blocked' && open) {
+    open.endedAt = nowIso;
+    open.minutes = Math.round((Date.parse(nowIso) - Date.parse(open.startedAt)) / 60000);
+  }
+}
+
 // 500 incidents is far more history than anyone scrolls through.
 writeJson(incidentsFile, incidents.slice(0, 500));
 

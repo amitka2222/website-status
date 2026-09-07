@@ -257,7 +257,59 @@ take a `cascade` block per form when it is worth doing properly.
 submission reaches the admissions system. Only a real submission proves that, and
 that is not something to automate.
 
-## Adding API checks later
+## Shared API monitoring
+
+Individual sites can all be green while the thing they *share* is broken. The
+endpoints in [`apis.json`](apis.json) are checked on every run by
+`scripts/probe.mjs` (plain GETs — no browser needed).
+
+| Endpoint | Owner | Sites relying on it |
+| --- | --- | --- |
+| `stasy.iie.edu.za/applynow/?location=` | The IIE | **15** |
+| `stasy.iie.edu.za/enquire/?location=` | The IIE | **12** |
+| `stasy.iie.edu.za/` (platform root) | The IIE | 15 |
+| `ezproxy.iielearn.ac.za/login` | The IIE | 1 |
+
+**STASY is the estate's single biggest dependency.** Fifteen sites open it to
+start an application and twelve to submit an enquiry. If it fails, applications
+stop across the group while all 37 sites still report perfectly healthy — which
+is exactly the blind spot this section exists to close. The dashboard sorts the
+API table by blast radius for that reason.
+
+### What is never called
+
+Discovery also turned up endpoints that must **not** be probed on a schedule.
+They are recorded in the `doNotProbe` block of `apis.json` so nobody adds them
+later by accident:
+
+| Endpoint | Why not |
+| --- | --- |
+| `rbi.ac.za` and `rosebankcollege.co.za` `/umbraco/Surface/CardPayment/Proceed` | Payment flow |
+| `…/PlacementPartnerXml/api/login` | Authentication — risks lockouts and abuse protection |
+| `…/CookieBannerSurface/HideBanner` | Mutates state |
+| `…/PlacementPartnerXml/api/getallcommunities` | Returned 404 when checked, though the July audit recorded it working — confirm the real URL before monitoring, or it would alert forever |
+
+Rules for adding an endpoint: **GET only, no side effects, no credentials.** This
+repository is public, so an authenticated endpoint needs a GitHub Actions secret
+read through `process.env` — never a value committed to `apis.json`.
+
+### Thresholds
+
+APIs use their own `API_SLOW_MS` (2.5s), not the 8s page-load figure. The STASY
+endpoints answer in 40–70ms, so inheriting the page threshold would let a
+hundred-fold regression pass as healthy. Individual endpoints can override it
+with `slowMs`.
+
+### How this list was built
+
+All 37 homepages and their first-party JavaScript were scanned for `fetch`,
+`axios`, `XMLHttpRequest`, `$.ajax` and form actions, then cross-referenced
+against `External_Links_and_APIs_Audit.xlsx`. Static scanning cannot see URLs
+that JavaScript builds at runtime, so this inventory is a floor, not a ceiling.
+Capturing real network traffic during the browser-driven form checks would find
+more, and is the natural next step.
+
+## Adding further checks
 
 The prober is already structured for it: `checkSite()` takes a row and returns a
 result object. Extending to APIs means adding columns to `sites.csv`

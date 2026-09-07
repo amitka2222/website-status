@@ -351,6 +351,19 @@
     <div class="empty" id="gridEmpty" hidden>No sites match those filters.</div>
   </div>
 
+  <div class="card" id="apisCard" hidden>
+    <h2>Shared APIs &amp; integrations <span class="muted" id="apisMeta"></span></h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Endpoint</th><th>Owner</th><th class="num">Response</th><th class="num">Sites relying on it</th><th>Detail</th></tr>
+        </thead>
+        <tbody id="apiRows"></tbody>
+      </table>
+    </div>
+    <div class="note" id="apisNote"></div>
+  </div>
+
   <div class="card" id="formsCard" hidden>
     <h2>Application &amp; enquiry forms
       <span class="muted" id="formsMeta"></span>
@@ -396,7 +409,7 @@
   var STALE_MULTIPLIER = 3;      // flag data as stale after N expected intervals
   var AUTO_REFRESH_MS  = 60000;
 
-  var state = { status: null, recent: null, incidents: [], forms: null,
+  var state = { status: null, recent: null, incidents: [], apis: null, forms: null,
                 formsRecent: null, sort: 'state', dir: 1 };
 
   // ---------------------------------------------------------- theme
@@ -712,8 +725,47 @@
     }).join('');
 
     renderGrid();
+    renderApis();
     renderForms();
     renderIncidents();
+  }
+
+  function renderApis() {
+    var a = state.apis;
+    var card = document.getElementById('apisCard');
+    if (!a || !a.apis || !a.apis.length) { card.hidden = true; return; }
+    card.hidden = false;
+
+    var bad = (a.down || 0) + (a.degraded || 0) + (a.blocked || 0);
+    document.getElementById('apisMeta').textContent =
+      '(' + (bad ? bad + ' needing attention · ' : 'all ' + a.total + ' responding · ') +
+      'checked ' + ago(a.generatedAt) + ')';
+
+    document.getElementById('apiRows').innerHTML = a.apis.slice().sort(function (x, y) {
+      return (STATE_RANK[x.state] - STATE_RANK[y.state]) || (y.usedBy - x.usedBy);
+    }).map(function (x) {
+      var label = x.state === 'up' ? 'OK'
+                : x.state === 'degraded' ? 'Degraded'
+                : x.state === 'blocked' ? 'Blocked' : 'Down';
+      // How many sites break with it is the number that decides urgency.
+      var used = Number(x.usedBy) || 0;
+      var blast = used > 1 ? '<b>' + esc(used) + '</b>' : (used === 1 ? '1' : '—');
+      return '<tr>' +
+        '<td><span class="pill s-' + x.state + '"><span class="dot"></span>' + label + '</span></td>' +
+        '<td><a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer" class="form-name">' +
+          esc(x.name) + '</a><div class="site-brand">' + esc(x.url.replace(/^https?:\/\//, '').slice(0, 62)) + '</div></td>' +
+        '<td>' + esc(x.owner || '') + '</td>' +
+        '<td class="num">' + (x.ms == null ? '—' : x.ms + ' ms') + '</td>' +
+        '<td class="num">' + blast + '</td>' +
+        '<td class="reason">' + esc(x.reason || '') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.getElementById('apisNote').textContent =
+      'Read-only GET checks of the endpoints multiple sites share. STASY carries the ' +
+      'largest blast radius: if it fails, applications and enquiries break across the ' +
+      'estate while every individual site still reports healthy. Payment, login and ' +
+      'form-submission endpoints are deliberately never called — see doNotProbe in apis.json.';
   }
 
   function renderForms() {
@@ -895,6 +947,7 @@
     state.recent      = await get('data/recent.json', { points: [], series: {} });
     state.incidents   = await get('data/incidents.json', []);
     // Forms are optional - the page works fine before the first form check runs.
+    state.apis        = await get('data/apis.json', null);
     state.forms       = await get('data/forms.json', null);
     state.formsRecent = await get('data/forms-recent.json', { points: [], series: {} });
 

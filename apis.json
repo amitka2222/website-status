@@ -1,0 +1,83 @@
+{
+  "_comment": [
+    "Shared API endpoints the Advtech sites depend on.",
+    "",
+    "Discovered by scanning all 37 homepages and their first-party JavaScript,",
+    "cross-referenced against External_Links_and_APIs_Audit.xlsx.",
+    "",
+    "RULES FOR THIS FILE",
+    "  1. GET only. Every endpoint here must be safe to call repeatedly with no",
+    "     side effect. If calling it changes anything, it does not belong here.",
+    "  2. No credentials, ever. This repository is public. An authenticated",
+    "     endpoint needs a GitHub Actions secret read via process.env, not a",
+    "     value in this file.",
+    "  3. Anything payment-, login- or submission-related is listed under",
+    "     doNotProbe below and must stay there."
+  ],
+
+  "apis": [
+    {
+      "id": "stasy-applynow",
+      "name": "STASY · Apply Now form",
+      "owner": "The IIE",
+      "url": "https://stasy.iie.edu.za/applynow/?location=",
+      "expectStatus": 200,
+      "expectContains": "Applicant Form",
+      "usedBy": 15,
+      "why": "The single largest shared dependency in the estate. 15 sites open this to start an application, so if it fails, applications break everywhere at once while every site still looks perfectly healthy."
+    },
+    {
+      "id": "stasy-enquire",
+      "name": "STASY · Enquiry form",
+      "owner": "The IIE",
+      "url": "https://stasy.iie.edu.za/enquire/?location=",
+      "expectStatus": 200,
+      "expectContains": "Enquiry Form",
+      "usedBy": 12,
+      "why": "Twelve sites route enquiries through this. Same blast radius as apply-now."
+    },
+    {
+      "id": "stasy-root",
+      "name": "STASY · Platform root",
+      "owner": "The IIE",
+      "url": "https://stasy.iie.edu.za/",
+      "expectStatus": 200,
+      "expectContains": "",
+      "usedBy": 15,
+      "why": "Distinguishes 'the whole STASY platform is down' from 'one form on it is broken'."
+    },
+    {
+      "id": "iie-ezproxy",
+      "name": "IIE Library · EZproxy sign-in",
+      "owner": "The IIE",
+      "url": "https://ezproxy.iielearn.ac.za/login",
+      "expectStatus": 200,
+      "expectContains": "Shibboleth",
+      "usedBy": 1,
+      "why": "Gateway to every licensed library database. A GET only renders the Shibboleth redirect page - no credentials are sent and no session is created."
+    }
+  ],
+
+  "doNotProbe": [
+    {
+      "url": "https://www.rbi.ac.za/umbraco/Surface/CardPayment/Proceed",
+      "reason": "Payment flow. Never call this on a schedule."
+    },
+    {
+      "url": "https://www.rosebankcollege.co.za/umbraco/Surface/CardPayment/Proceed",
+      "reason": "Payment flow. Never call this on a schedule."
+    },
+    {
+      "url": "https://az-jhb-was-rescr-duda-api-prod.azurewebsites.net/PlacementPartnerXml/api/login",
+      "reason": "Authentication endpoint. Repeated automated calls risk lockouts or tripping abuse protection. The July audit already recorded it returning HTTP 500."
+    },
+    {
+      "url": "https://www.rbi.ac.za/umbraco/Surface/CookieBannerSurface/HideBanner",
+      "reason": "Mutates state (dismisses the cookie banner). Read-only checks only."
+    },
+    {
+      "url": "https://az-jhb-was-rescr-duda-api-prod-communicate.azurewebsites.net/PlacementPartnerXml/api/getallcommunities",
+      "reason": "Returned HTTP 404 when checked, though the July audit recorded it as working. Confirm the correct URL with whoever owns the Placement Partner integration before monitoring it - otherwise this would alert permanently."
+    }
+  ]
+}
