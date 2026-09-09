@@ -14,7 +14,6 @@
     "",
     "NOTHING HERE IS EVER SUBMITTED. These checks load and inspect the form only."
   ],
-
   "forms": [
     {
       "id": "emeris-application",
@@ -32,8 +31,14 @@
         "[name='ctl00$MainContent$txt_SDMobileNumber']"
       ],
       "populatedSelects": [
-        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
-        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDCampus']",
+          "min": 2
+        },
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']",
+          "min": 2
+        }
       ],
       "expectText": ""
     },
@@ -54,8 +59,14 @@
         "[name='fx_mobileNumber']"
       ],
       "populatedSelects": [
-        { "selector": "[name='fx_registrationType']", "min": 2 },
-        { "selector": "[name='fx_intakeYear']", "min": 2 }
+        {
+          "selector": "[name='fx_registrationType']",
+          "min": 2
+        },
+        {
+          "selector": "[name='fx_intakeYear']",
+          "min": 2
+        }
       ],
       "expectText": ""
     },
@@ -72,8 +83,14 @@
         "[name='ctl00$MainContent$ddl_QDQualification']"
       ],
       "populatedSelects": [
-        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
-        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDCampus']",
+          "min": 2
+        },
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']",
+          "min": 2
+        }
       ],
       "expectText": ""
     },
@@ -93,8 +110,14 @@
         "[name='mobile_number']"
       ],
       "populatedSelects": [
-        { "selector": "[name='campus']", "min": 2 },
-        { "selector": "[name='intake_year']", "min": 2 }
+        {
+          "selector": "[name='campus']",
+          "min": 2
+        },
+        {
+          "selector": "[name='intake_year']",
+          "min": 2
+        }
       ],
       "expectText": ""
     },
@@ -113,8 +136,14 @@
         "[name='ctl00$MainContent$txt_SDMobileNumber']"
       ],
       "populatedSelects": [
-        { "selector": "[name='ctl00$MainContent$ddl_QDCampus']", "min": 2 },
-        { "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']", "min": 2 }
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDCampus']",
+          "min": 2
+        },
+        {
+          "selector": "[name='ctl00$MainContent$ddl_QDIntakeYear']",
+          "min": 2
+        }
       ],
       "expectText": ""
     },
@@ -130,6 +159,28 @@
       ],
       "populatedSelects": [],
       "expectText": "Create an Account"
+    },
+    {
+      "id": "wsb-catalogue",
+      "name": "WSB \u00b7 Programme catalogue",
+      "brand": "Waterfall School of Business",
+      "division": "Tertiary",
+      "url": "https://portal.wsb.edu.za/",
+      "waitFor": ".prog-card",
+      "requiredFields": [
+        ".search-box input",
+        ".filter-tab",
+        "section.catalog"
+      ],
+      "populatedSelects": [],
+      "minCounts": [
+        {
+          "selector": ".prog-card",
+          "min": 5
+        }
+      ],
+      "expectText": "Programme Catalogue",
+      "why": "A client-rendered catalogue: the HTML contains no programmes at all, so only a browser can tell whether it loaded. minCounts is the important part - an empty catalogue still returns HTTP 200 and still looks like a working page."
     }
   ]
 }

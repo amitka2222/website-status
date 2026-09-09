@@ -33,6 +33,14 @@ const API_SLOW_MS    = 2500;
 
 const USER_AGENT = 'Advtech-SiteMonitor/1.0 (+availability monitoring)';
 
+// SCOPE lets a run check one component on its own, so someone who has just fixed
+// an API can re-test it without re-probing 38 sites. Scheduled runs use 'all'.
+// Anything a scope does not cover is left completely untouched on disk - a
+// sites-only run must not overwrite the API results with an empty set.
+const SCOPE = (process.env.SCOPE || 'all').toLowerCase();
+const RUN_SITES = SCOPE === 'all' || SCOPE === 'sites';
+const RUN_APIS  = SCOPE === 'all' || SCOPE === 'apis';
+
 // Some properties sit behind a Cloudflare bot challenge that returns 403 to every
 // automated client regardless of user agent or source IP. The site is perfectly
 // fine for real visitors, so this is "cannot verify" - not "down". Calling it an
@@ -164,8 +172,13 @@ async function checkSite(site) {
   let result;
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     result = await probe(site.Url);
-    if (!result.error) break;
-    // A single dropped packet should not read as an outage.
+    // A single dropped packet - or one transient 5xx/403 - should not read as an
+    // outage. A genuine outage still fails the retry.
+    const transient = result.error ||
+                      result.status >= 500 ||
+                      result.status === 403 ||
+                      result.status === 429;
+    if (!transient) break;
     if (attempt < RETRIES) await new Promise(r => setTimeout(r, 1500));
   }
 
@@ -221,15 +234,18 @@ async function checkSite(site) {
 // at the top of that file, and the doNotProbe list of endpoints that must never
 // be called on a schedule.
 async function checkApi(api) {
+  const wanted = api.expectStatus || 200;
   let result;
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     result = await probe(api.url);
-    if (!result.error) break;
+    // Retry a bad status as well as a transport error - a lone transient 403 or
+    // 5xx is noise, and calling it an outage opens a false incident.
+    if (!result.error && result.status === wanted) break;
     if (attempt < RETRIES) await new Promise(r => setTimeout(r, 1500));
   }
 
   const blocked = isBotChallenge(result.status, result.headers, result.body);
-  const expected = api.expectStatus || 200;
+  const expected = wanted;
   const statusOk = result.status === expected;
   const needle = (api.expectContains || '').trim();
   const contentOk = needle ? (result.body || '').includes(needle) : null;
@@ -302,16 +318,18 @@ function percentile(sortedValues, p) {
 const sites = parseCsv(readFileSync(join(ROOT, 'sites.csv'), 'utf8'));
 const startedAt = Date.now();
 
-console.log('Probing ' + sites.length + ' sites...');
-
-const results = (await runPool(sites, checkSite, CONCURRENCY))
-  .sort((a, b) => a.site.localeCompare(b.site));
+let results = [];
+if (RUN_SITES) {
+  console.log('Probing ' + sites.length + ' sites...');
+  results = (await runPool(sites, checkSite, CONCURRENCY))
+    .sort((a, b) => a.site.localeCompare(b.site));
+}
 
 // ---------------------------------------------------------------- API checks
 let apiResults = [];
 let apiConfigError = null;
 const apiFile = join(ROOT, 'apis.json');
-if (existsSync(apiFile)) {
+if (RUN_APIS && existsSync(apiFile)) {
   try {
     const apiCfg = JSON.parse(readFileSync(apiFile, 'utf8'));
     const apis = apiCfg.apis || [];
@@ -343,7 +361,8 @@ const month  = nowIso.slice(0, 7);
 const VANTAGE_SUSPECT_RATIO = 0.4;
 
 const connectionFailures = results.filter(r => r.state === 'down' && !r.status);
-const vantageSuspect = connectionFailures.length / results.length >= VANTAGE_SUSPECT_RATIO;
+const vantageSuspect = RUN_SITES && results.length > 0 &&
+                       connectionFailures.length / results.length >= VANTAGE_SUSPECT_RATIO;
 
 if (vantageSuspect) {
   for (const r of connectionFailures) {
@@ -371,7 +390,7 @@ const counts = { up: 0, degraded: 0, down: 0, blocked: 0 };
 for (const r of results) counts[r.state]++;
 
 // --- 1. Current snapshot -------------------------------------------------
-writeJson(join(DATA, 'status.json'), {
+if (RUN_SITES) writeJson(join(DATA, 'status.json'), {
   generatedAt: nowIso,
   total: results.length,
   up: counts.up,
@@ -384,10 +403,10 @@ writeJson(join(DATA, 'status.json'), {
 });
 
 // --- 1b. Shared API endpoints -------------------------------------------
-// Written unconditionally. If this only ran when there were results, a typo in
-// apis.json would leave the previous run's file in place and the dashboard would
-// keep showing those states as current, with nothing to indicate they were stale.
-{
+// Written whenever APIs were in scope. Not gated on there being results: a typo
+// in apis.json would otherwise leave the previous run's file in place and the
+// dashboard would keep showing those states as current.
+if (RUN_APIS) {
   const apiCounts = { up: 0, degraded: 0, down: 0, blocked: 0 };
   for (const r of apiResults) apiCounts[r.state]++;
   writeJson(join(DATA, 'apis.json'), {
@@ -407,6 +426,7 @@ writeJson(join(DATA, 'status.json'), {
 }
 
 // --- 2. Rolling sparkline window (column-oriented to keep the file small) -
+if (RUN_SITES) {
 const recent = readJson(join(DATA, 'recent.json'), { points: [], series: {} });
 recent.points.push(nowIso);
 for (const r of results) {
@@ -424,18 +444,22 @@ for (const key of Object.keys(recent.series)) {
     delete recent.series[key];
     continue;
   }
-  // Left-pad series for sites added part-way through the window so every
-  // series lines up with the shared points axis.
+  // Left-pad series for sites added part-way through the window so every series
+  // lines up with the shared points axis. The pad is -1, not null: null means
+  // "checked, and it was down", and padding a brand-new site with nulls made it
+  // report 2% uptime on its first day.
   const pad = recent.points.length - recent.series[key].length;
-  if (pad > 0) recent.series[key] = Array(pad).fill(null).concat(recent.series[key]);
+  if (pad > 0) recent.series[key] = Array(pad).fill(-1).concat(recent.series[key]);
   if (recent.series[key].length > recent.points.length) {
     recent.series[key] = recent.series[key].slice(-recent.points.length);
   }
 }
 recent.updatedAt = nowIso;
 writeJson(join(DATA, 'recent.json'), recent);
+}
 
 // --- 3. Daily aggregates (one small file per month) ----------------------
+if (RUN_SITES) {
 const dailyFile = join(DAILY_DIR, month + '.json');
 const daily = readJson(dailyFile, {});
 if (!daily[day]) daily[day] = {};
@@ -461,6 +485,7 @@ for (const r of results) {
   d.uptime = Number((d.up / d.checks).toFixed(4));
 }
 writeJson(dailyFile, daily);
+}
 
 // --- 4. Incident log (open on first failure, close on recovery) ----------
 const incidentsFile = join(DATA, 'incidents.json');
@@ -526,7 +551,9 @@ writeJson(incidentsFile, incidents.slice(0, 500));
 
 // --- 5. Console summary --------------------------------------------------
 const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
-console.log('Done in ' + secs + 's - up ' + counts.up + ', degraded ' + counts.degraded +
+if (!RUN_SITES) console.log('Scope: ' + SCOPE + ' - site checks skipped, existing site data left untouched.');
+if (!RUN_APIS)  console.log('Scope: ' + SCOPE + ' - API checks skipped, existing API data left untouched.');
+if (RUN_SITES) console.log('Done in ' + secs + 's - up ' + counts.up + ', degraded ' + counts.degraded +
             ', down ' + counts.down + ', blocked ' + counts.blocked);
 for (const r of results.filter(x => x.state !== 'up')) {
   console.log('  [' + r.state.toUpperCase() + '] ' + r.site + ' - ' + r.reason);

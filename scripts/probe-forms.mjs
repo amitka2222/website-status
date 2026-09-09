@@ -60,7 +60,7 @@ for (const form of forms) {
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + String(e.message).slice(0, 200)));
 
   const problems = [];
-  const detail = { missingFields: [], emptySelects: [], selectCounts: {} };
+  const detail = { missingFields: [], emptySelects: [], selectCounts: {}, counts: {}, tooFew: [] };
   let status = null, ms = null, finalUrl = null, rendered = false, blocked = false;
 
   const started = Date.now();
@@ -116,6 +116,20 @@ for (const form of forms) {
           problems.push('empty dropdown: ' + detail.emptySelects.join(', '));
         }
 
+        // 2b. Did repeated content actually render? The same class of failure as
+        //     an empty dropdown: a catalogue that loads its shell but no items
+        //     returns HTTP 200 and looks entirely healthy from the outside.
+        for (const spec of form.minCounts || []) {
+          const n = await page.locator(spec.selector).count().catch(() => 0);
+          detail.counts[spec.selector] = n;
+          if (n < spec.min) {
+            detail.tooFew.push(spec.selector + ' (' + n + ', expected ' + spec.min + '+)');
+          }
+        }
+        if (detail.tooFew.length) {
+          problems.push('nothing rendered: ' + detail.tooFew.join(', '));
+        }
+
         // 3. Expected copy present?
         if (form.expectText) {
           const body = await page.textContent('body').catch(() => '');
@@ -152,6 +166,7 @@ for (const form of forms) {
     fieldsChecked: (form.requiredFields || []).length,
     fieldsMissing: detail.missingFields.length,
     selectCounts: detail.selectCounts,
+    counts: detail.counts,
     consoleErrors: consoleErrors.length,
     reason: problems.join('; '),
   });

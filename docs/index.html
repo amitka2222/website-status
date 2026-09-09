@@ -306,11 +306,30 @@
   .attn-more { font-size: 12.5px; color: var(--muted); padding-top: 2px; }
 
   /* ---------------- tabs ---------------- */
-  .tabs {
-    display: flex; gap: 3px; flex-wrap: wrap;
+  .tabbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
     border-bottom: 2px solid var(--line); margin-bottom: 18px;
     position: sticky; top: 0; z-index: 6;
     background: var(--bg); padding-top: 6px;
+  }
+  .tabs { display: flex; gap: 3px; flex-wrap: wrap; }
+
+  .run-group { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; flex-wrap: wrap; }
+  .run-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+               color: var(--muted); font-weight: 700; }
+  .runbtn {
+    background: var(--card); border: 1px solid var(--line-strong); color: var(--navy);
+    border-radius: 7px; padding: 5px 11px; font: inherit; font-size: 12px;
+    font-weight: 700; cursor: pointer;
+  }
+  .runbtn:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .runbtn:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+  .runbtn[disabled] { opacity: .5; cursor: default; }
+  .run-note {
+    background: var(--blk-bg); border: 1px solid var(--line); border-left: 4px solid var(--navy);
+    border-radius: 8px; padding: 10px 14px; margin: -8px 0 16px;
+    font-size: 12.5px; color: var(--ink);
   }
   .tab {
     background: none; border: none; border-bottom: 3px solid transparent;
@@ -364,6 +383,9 @@
     .tile { padding: 10px 12px; }
     .attn-item { font-size: 12.5px; }
     .attn-go { margin-left: 0; }
+    .tabbar { align-items: stretch; }
+    .run-label { display: none; }
+    .run-group { padding-bottom: 8px; }
   }
 </style>
 </head>
@@ -411,12 +433,21 @@
     <div class="attn-list" id="attnList"></div>
   </div>
 
-  <nav class="tabs" id="tabs" role="tablist" aria-label="Monitoring sections">
-    <button class="tab" data-tab="sites"     role="tab" aria-selected="true">Sites     <span class="badge" id="badgeSites"></span></button>
-    <button class="tab" data-tab="apis"      role="tab" aria-selected="false">APIs      <span class="badge" id="badgeApis"></span></button>
-    <button class="tab" data-tab="forms"     role="tab" aria-selected="false">Forms     <span class="badge" id="badgeForms"></span></button>
-    <button class="tab" data-tab="incidents" role="tab" aria-selected="false">Incidents <span class="badge" id="badgeIncidents"></span></button>
-  </nav>
+  <div class="tabbar" id="tabs">
+    <nav class="tabs" role="tablist" aria-label="Monitoring sections">
+      <button class="tab" data-tab="sites"     role="tab" aria-selected="true">Sites     <span class="badge" id="badgeSites"></span></button>
+      <button class="tab" data-tab="apis"      role="tab" aria-selected="false">APIs      <span class="badge" id="badgeApis"></span></button>
+      <button class="tab" data-tab="forms"     role="tab" aria-selected="false">Forms     <span class="badge" id="badgeForms"></span></button>
+      <button class="tab" data-tab="incidents" role="tab" aria-selected="false">Incidents <span class="badge" id="badgeIncidents"></span></button>
+    </nav>
+    <div class="run-group">
+      <span class="run-label">Run a check now:</span>
+      <button class="runbtn" data-run="sites" type="button">Sites</button>
+      <button class="runbtn" data-run="apis"  type="button">APIs</button>
+      <button class="runbtn" data-run="forms" type="button">Forms</button>
+    </div>
+  </div>
+  <div class="run-note" id="runNote" hidden></div>
 
   <div class="tabpanel" data-panel="sites">
 
@@ -595,6 +626,9 @@
     if (!series || !series.length) return null;
     var seen = 0, ok = 0;
     for (var i = 0; i < series.length; i++) {
+      // -1 is padding from before this site was added - it was never checked,
+      // so it is neither uptime nor downtime.
+      if (series[i] === -1) continue;
       seen++;
       if (series[i] !== null) ok++;
     }
@@ -622,7 +656,7 @@
     opts = opts || {};
     var w = +svg.getAttribute('width'), h = +svg.getAttribute('height');
     var padY = 4;
-    var nums = values.filter(function (v) { return v !== null && v !== undefined; });
+    var nums = values.filter(function (v) { return v !== null && v !== undefined && v !== -1; });
 
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     if (!nums.length) {
@@ -644,6 +678,7 @@
     var ns = 'http://www.w3.org/2000/svg';
     var segments = [], cur = [];
     for (var i = 0; i < n; i++) {
+      if (values[i] === -1) { if (cur.length) { segments.push(cur); cur = []; } continue; }
       if (values[i] === null || values[i] === undefined) {
         if (cur.length) { segments.push(cur); cur = []; }
         var tick = document.createElementNS(ns, 'rect');
@@ -782,7 +817,10 @@
     var keys = Object.keys(series);
     var upCounts = pts.map(function (_, i) {
       var c = 0;
-      for (var k = 0; k < keys.length; k++) if (series[keys[k]][i] !== null && series[keys[k]][i] !== undefined) c++;
+      for (var k = 0; k < keys.length; k++) {
+        var v = series[keys[k]][i];
+        if (v !== null && v !== undefined && v !== -1) c++;
+      }
       return c;
     });
     sparkline(document.getElementById('estateSpark'), upCounts, pts);
@@ -839,6 +877,64 @@
     var stillOpen = state.incidents.filter(function (i) { return !i.endedAt; }).length;
     setBadge('badgeIncidents', state.incidents.length, stillOpen > 0, false);
 
+  }
+
+  // ------------------------------------------------ on-demand check buttons
+  // A static page cannot call the GitHub API to start a workflow: that needs a
+  // token, and a token in a page is a published token. So today these open the
+  // right workflow in GitHub. Point RUN_ENDPOINT at a small server-side proxy
+  // that holds the token (a Cloudflare Worker, say) and they become one-click
+  // for anyone who can see this dashboard, GitHub account or not.
+  var RUN_ENDPOINT = '';
+  var REPO = 'amitka2222/website-status';
+  var RUNNABLE = {
+    sites: { workflow: 'monitor.yml', scope: 'sites', label: 'Sites' },
+    apis:  { workflow: 'monitor.yml', scope: 'apis',  label: 'APIs' },
+    forms: { workflow: 'forms.yml',   scope: '',      label: 'Forms' }
+  };
+
+  function showRunNote(html) {
+    var n = document.getElementById('runNote');
+    n.innerHTML = html;
+    n.hidden = false;
+  }
+
+  async function runCheck(which) {
+    var cfg = RUNNABLE[which];
+    if (!cfg) return;
+    var btn = document.querySelector('.runbtn[data-run="' + which + '"]');
+
+    if (RUN_ENDPOINT) {
+      btn.disabled = true;
+      var original = btn.textContent;
+      btn.textContent = 'Starting…';
+      try {
+        var res = await fetch(RUN_ENDPOINT, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ component: which })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        showRunNote('<b>' + esc(cfg.label) + ' check queued.</b> Results usually appear ' +
+                    'within a minute or two — this page refreshes itself every 60 seconds.');
+      } catch (e) {
+        showRunNote('<b>Could not start the ' + esc(cfg.label) + ' check.</b> ' + esc(e.message));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+      return;
+    }
+
+    // Fallback: hand the person straight to the workflow.
+    var url = 'https://github.com/' + REPO + '/actions/workflows/' + cfg.workflow;
+    window.open(url, '_blank', 'noopener');
+    showRunNote('Opened the <b>' + esc(cfg.workflow) + '</b> workflow on GitHub. ' +
+      'Press <b>Run workflow</b>' +
+      (cfg.scope ? ' and set <b>What to check</b> to <b>' + esc(cfg.scope) + '</b>' : '') +
+      '. Results land here within a minute or two. ' +
+      '<em>This needs a GitHub account with access to the repository — see the README ' +
+      'for making these buttons one-click for everyone.</em>');
   }
 
   // ---------------------------------------------------------- tabs
@@ -1194,6 +1290,9 @@
 
   document.querySelectorAll('.tab').forEach(function (btn) {
     btn.addEventListener('click', function () { showTab(btn.getAttribute('data-tab')); });
+  });
+  document.querySelectorAll('.runbtn').forEach(function (btn) {
+    btn.addEventListener('click', function () { runCheck(btn.getAttribute('data-run')); });
   });
   window.addEventListener('hashchange', function () { showTab(location.hash.replace('#', '')); });
   showTab(location.hash.replace('#', '') || 'sites');

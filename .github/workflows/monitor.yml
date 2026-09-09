@@ -7,6 +7,13 @@ on:
     # Note that GitHub cron is best-effort and runs are often delayed under load.
     - cron: '*/5 * * * *'
   workflow_dispatch:        # lets anyone trigger a check by hand from the Actions tab
+    inputs:
+      scope:
+        description: 'What to check'
+        required: false
+        default: 'all'
+        type: choice
+        options: [all, sites, apis]
   push:
     branches: [main]
     paths:
@@ -32,7 +39,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Probe all sites
+      - name: Probe
+        env:
+          # Scheduled and push runs check everything; a manual run can narrow it.
+          SCOPE: ${{ github.event.inputs.scope || 'all' }}
         run: node scripts/probe.mjs
 
       - name: Commit results
