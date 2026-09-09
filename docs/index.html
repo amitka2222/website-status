@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Advtech Website Status</title>
+<!-- Uncomment when serving from a custom domain on Cloudflare Pages:
+     <meta name="deployment" content="cloudflare"> -->
 <meta name="description" content="Live availability, performance and certificate status for the Advtech website estate.">
 <style>
   /* ===================================================================
@@ -543,6 +545,18 @@
 <div id="tip" role="tooltip"></div>
 
 <script>
+// Cloudflare Pages Functions are served from the same origin as the page. A
+// static copy (opened from disk, or the plain GitHub Pages build) has no /api,
+// so probe once and let the dashboard pick its data source accordingly.
+(function () {
+  try {
+    var onCloudflare = location.hostname.endsWith('.pages.dev') ||
+                       !!document.querySelector('meta[name="deployment"][content="cloudflare"]');
+    if (onCloudflare) { window.__DATA_API__ = true; window.__RUN_API__ = '/api/run'; }
+  } catch (e) {}
+})();
+</script>
+<script>
 (function () {
   'use strict';
 
@@ -885,7 +899,9 @@
   // right workflow in GitHub. Point RUN_ENDPOINT at a small server-side proxy
   // that holds the token (a Cloudflare Worker, say) and they become one-click
   // for anyone who can see this dashboard, GitHub account or not.
-  var RUN_ENDPOINT = '';
+  // Set by the deployed page (see the inline bootstrap at the end of this file).
+  // Empty on a plain static copy, where the buttons fall back to opening GitHub.
+  var RUN_ENDPOINT = window.__RUN_API__ || '';
   var REPO = 'amitka2222/website-status';
   var RUNNABLE = {
     sites: { workflow: 'monitor.yml', scope: 'sites', label: 'Sites' },
@@ -1235,11 +1251,18 @@
   }
 
   // ---------------------------------------------------------- data loading
+  // On Cloudflare the JSON comes through a Pages Function that reads the private
+  // repo server-side (/api/data/...). Opened straight from disk or a plain static
+  // server, it falls back to the files sitting next to the page, so local
+  // development and the GitHub Pages copy both keep working unchanged.
+  var USE_API = !!window.__DATA_API__;
+  var dataUrl = function (name) { return USE_API ? '/api/data/' + name : 'data/' + name; };
+
   async function load() {
-    var bust = '?t=' + Date.now();   // Pages caches aggressively; always ask for fresh JSON
-    var get = async function (path, fallback) {
+    var bust = '?t=' + Date.now();   // caches are aggressive; always ask for fresh JSON
+    var get = async function (name, fallback) {
       try {
-        var res = await fetch(path + bust, { cache: 'no-store' });
+        var res = await fetch(dataUrl(name) + bust, { cache: 'no-store' });
         if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
         return await res.json();
       } catch (e) {
@@ -1247,22 +1270,22 @@
       }
     };
 
-    var status = await get('data/status.json', null);
+    var status = await get('status.json', null);
     if (!status) {
       document.getElementById('subtitle').textContent = 'Could not load status data.';
       document.getElementById('heroFigure').textContent = 'No data';
       document.getElementById('heroLabel').textContent =
-        'data/status.json is missing or unreadable. If the repository was only just created, ' +
+        'The status data could not be loaded. If this deployment was only just created, ' +
         'the first monitoring run may not have finished yet.';
       return;
     }
     state.status      = status;
-    state.recent      = await get('data/recent.json', { points: [], series: {} });
-    state.incidents   = await get('data/incidents.json', []);
+    state.recent      = await get('recent.json', { points: [], series: {} });
+    state.incidents   = await get('incidents.json', []);
     // Forms are optional - the page works fine before the first form check runs.
-    state.apis        = await get('data/apis.json', null);
-    state.forms       = await get('data/forms.json', null);
-    state.formsRecent = await get('data/forms-recent.json', { points: [], series: {} });
+    state.apis        = await get('apis.json', null);
+    state.forms       = await get('forms.json', null);
+    state.formsRecent = await get('forms-recent.json', { points: [], series: {} });
 
     var sel = document.getElementById('fDivision');
     if (sel.options.length <= 1) {

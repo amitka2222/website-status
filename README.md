@@ -104,6 +104,31 @@ To change it, edit the `cron` line in
   but because each run commits its results, the repo never goes inactive and the
   schedule sustains itself.
 
+## Hosting
+
+Currently on GitHub Pages, public. The move to a **private repo behind Cloudflare
+Pages + Access** is written and ready — see **[CLOUDFLARE.md](CLOUDFLARE.md)** for
+the steps that need a human.
+
+Why the move: a GitHub Pages site stays public even when its repository is
+private, so going private alone changes nothing about who can read the dashboard.
+And what is worth protecting is not the site list — all 38 are public marketing
+sites — but [`apis.json`](apis.json), which maps internal portals and names the
+payment and login endpoints in its `doNotProbe` block. That is a reconnaissance
+document.
+
+The `functions/` directory holds two Cloudflare Pages Functions that are inert
+until deployed there:
+
+- **`/api/data/*`** reads results from the private repo through the GitHub API,
+  edge-cached for 30s. This is what avoids a Pages rebuild per result commit —
+  at ~14 commits a day that would be ~430 builds against a 500/month allowance.
+- **`/api/run`** starts a workflow with the token held server-side, which is what
+  makes the check buttons work for people with no GitHub account.
+
+The dashboard detects whether those Functions exist and falls back to plain files
+otherwise, so opening `docs/index.html` locally or on GitHub Pages still works.
+
 ## Reading the dashboard
 
 The page is built so the question *"is anything wrong?"* is answered without
